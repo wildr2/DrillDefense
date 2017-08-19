@@ -12,6 +12,16 @@ public class Ground : MonoBehaviour
     private float width, height; // world units
     private float resolution = 10; // pixels per world unit
 
+
+
+    public void DrillLine(Vector2 p1, Vector2 p2, float width)
+    {
+        DrawLineWeighted(tex, WorldToTexPos(p1), WorldToTexPos(p2),
+            Mathf.CeilToInt(resolution * width), Color.clear);
+        tex.Apply();
+    }
+
+
     private void Awake()
     {
         sRenderer = GetComponent<SpriteRenderer>();
@@ -29,11 +39,23 @@ public class Ground : MonoBehaviour
         sRenderer.color = Color.white;
 
         //DrawLine(tex, new Vector2(0, 0), new Vector2(tex.width, tex.height), Color.clear);
-        //DrawLine(tex, new Vector2(0, 1), new Vector2(tex.width-1, tex.height), Color.clear);
-        DrawLine(tex, new Vector2(0, tex.height / 2f), new Vector2(tex.width, tex.height / 2f), Color.clear);
-        DrawLine(tex, new Vector2(tex.width / 2f, 0), new Vector2(tex.width / 2f, tex.height), Color.clear);
+        //DrawLine(tex, new Vector2(0, 1), new Vector2(tex.width - 1, tex.height), Color.clear);
+        //DrawLine(tex, new Vector2(0, tex.height / 2f), new Vector2(tex.width, tex.height / 2f), Color.clear);
+        //DrawLine(tex, new Vector2(tex.width / 2f, 0), new Vector2(tex.width / 2f, tex.height), Color.clear);
+        //DrawLineWeighted(tex, new Vector2(10, 0), new Vector2(80, tex.height), 10, Color.clear);
+
+        DrillLine(new Vector2(0, -5), new Vector2(0, 5), 1);
 
         tex.Apply();
+    }
+
+    private Vector2 WorldToTexPos(Vector2 worldPos)
+    {
+        Vector2 ret = worldPos;
+        ret -= (Vector2)transform.position;
+        ret.x = ((ret.x / width) + 0.5f) * tex.width;
+        ret.y = ((ret.y / height) + 0.5f) * tex.height;
+        return ret;
     }
 
     /// <summary>
@@ -54,6 +76,16 @@ public class Ground : MonoBehaviour
             t = Vector2.Lerp(p1, p2, ctr);
             ctr += frac;
             tex.SetPixel((int)t.x, (int)t.y, col);
+        }
+    }
+    private static void DrawLineWeighted(Texture2D tex, Vector2 p1, Vector2 p2, int w, Color col)
+    {
+        Vector2 normal = Vector3.Cross(p2 - p1, Vector3.forward).normalized;
+        for (int x = 0; x < w; ++x)
+        {
+            DrawLine(tex, p1, p2, col);
+            p1 += normal;
+            p2 += normal;
         }
     }
     private static void FillTexture(Texture2D tex, Color color)
