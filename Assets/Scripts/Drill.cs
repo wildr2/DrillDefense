@@ -6,6 +6,7 @@ public class Drill : MonoBehaviour
 {
     private float speed = 1; // units per second
     private Ground ground;
+    public SpriteRenderer colliderSprite;
 
     private void Awake()
     {
@@ -18,6 +19,16 @@ public class Drill : MonoBehaviour
         Vector2 velocity = heading * speed;
         transform.Translate(velocity * Time.deltaTime, Space.World);
 
-        ground.DrillLine(oldPos, transform.position, 1);
+        //if (ground.IsGround(transform.position))
+        //{
+        //    ground.DrillLine(oldPos, transform.position, 1);
+        //    Debug.DrawLine(transform.position, (Vector2)transform.position + heading, Color.red);
+        //}
+
+        if (ground.SpriteOverlaps(colliderSprite))
+        {
+            Debug.DrawLine(transform.position, (Vector2)transform.position + heading, Color.red);
+        }
+
     }
 }

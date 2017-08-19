@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum GroundState { UnDug, Dug, None }
+
 public class Ground : MonoBehaviour
 {
     public Color groundColor = Color.white;
+    private Color emptyColor = Color.clear;
 
     private SpriteRenderer sRenderer;
     private Sprite sprite;
@@ -14,12 +17,56 @@ public class Ground : MonoBehaviour
 
 
 
+    public GroundState GetStateAt(Vector2 worldPos)
+    {
+        return GetStateAtTexPos(WorldToTexPos(worldPos));
+    }
+    /// <summary>
+    /// Return whether any non-transparent pixels in a sprite overlap ground in specified state
+    /// </summary>
+    /// <param name="tex"></param>
+    /// <returns></returns>
+    public bool SpriteOverlaps(SpriteRenderer sr, GroundState state=GroundState.UnDug)
+    {
+        // TODO: interpolate texPos instead of worldPos to avoid calls to WorldToTexPos
+
+        // Check if sprite bounds overlap ground bounds at all
+        if (!BoundsOverlap(sr.bounds))
+        {
+            return false;
+        }
+
+        // Check pixel by pixel
+        Vector2 pos = sr.transform.TransformPoint(sr.sprite.bounds.min); // world pos of current sprite pixel
+        Vector2 dx = sr.transform.TransformVector(new Vector2(1f / sr.sprite.pixelsPerUnit, 0));
+        Vector2 dy = sr.transform.TransformVector(new Vector2(0, 1f / sr.sprite.pixelsPerUnit));
+
+        for (int x = 0; x < sr.sprite.texture.width; ++x)
+        {
+            for (int y = 0; y < sr.sprite.texture.height; ++y)
+            {
+                if (sr.sprite.texture.GetPixel(x, y).a > 0)
+                {
+                    if (GetStateAt(pos) == state)
+                    {
+                        return true;
+                    }
+                }
+                pos += dy;
+            }
+            pos -= dy * sr.sprite.texture.width;
+            pos += dx;
+        }
+
+        return false;
+    }
+
     public void DrillLine(Vector2 p1, Vector2 p2, float width)
     {
         int weight = Mathf.CeilToInt(resolution * width);
 
         DrawLineWeighted(tex, WorldToTexPos(p1), WorldToTexPos(p2),
-            weight, Color.clear);
+            weight, emptyColor);
         tex.Apply();
     }
 
@@ -40,11 +87,11 @@ public class Ground : MonoBehaviour
         sRenderer.sprite = sprite;
         sRenderer.color = Color.white;
 
-        //DrawLine(tex, new Vector2(0, 0), new Vector2(tex.width, tex.height), Color.clear);
-        //DrawLine(tex, new Vector2(0, 1), new Vector2(tex.width - 1, tex.height), Color.clear);
-        //DrawLine(tex, new Vector2(0, tex.height / 2f), new Vector2(tex.width, tex.height / 2f), Color.clear);
-        //DrawLine(tex, new Vector2(tex.width / 2f, 0), new Vector2(tex.width / 2f, tex.height), Color.clear);
-        //DrawLineWeighted(tex, new Vector2(10, 0), new Vector2(80, tex.height), 10, Color.clear);
+        //DrawLine(tex, new Vector2(0, 0), new Vector2(tex.width, tex.height), emptyColor);
+        //DrawLine(tex, new Vector2(0, 1), new Vector2(tex.width - 1, tex.height), emptyColor);
+        //DrawLine(tex, new Vector2(0, tex.height / 2f), new Vector2(tex.width, tex.height / 2f), emptyColor);
+        //DrawLine(tex, new Vector2(tex.width / 2f, 0), new Vector2(tex.width / 2f, tex.height), emptyColor);
+        //DrawLineWeighted(tex, new Vector2(10, 0), new Vector2(80, tex.height), 10, emptyColor);
 
         //DrillLine(new Vector2(0, 5), new Vector2(0, -5), 1);
 
@@ -58,6 +105,20 @@ public class Ground : MonoBehaviour
         ret.x = ((ret.x / width) + 0.5f) * tex.width;
         ret.y = ((ret.y / height) + 0.5f) * tex.height;
         return ret;
+    }
+    private GroundState GetStateAtTexPos(Vector2 texPos)
+    {
+        if (texPos.x < 0 || texPos.x >= tex.width || texPos.y < 0 || texPos.y >= tex.height)
+        {
+            // Out of ground bounds
+            return GroundState.None;
+        }
+        return tex.GetPixel((int)texPos.x, (int)texPos.y) == emptyColor ?
+            GroundState.Dug : GroundState.UnDug;
+    }
+    private bool BoundsOverlap(Bounds otherBounds)
+    {
+        return sRenderer.bounds.Intersects(otherBounds);
     }
 
     /// <summary>
