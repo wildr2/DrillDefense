@@ -16,8 +16,10 @@ public class Ground : MonoBehaviour
 
     public void DrillLine(Vector2 p1, Vector2 p2, float width)
     {
+        int weight = Mathf.CeilToInt(resolution * width);
+
         DrawLineWeighted(tex, WorldToTexPos(p1), WorldToTexPos(p2),
-            Mathf.CeilToInt(resolution * width), Color.clear);
+            weight, Color.clear);
         tex.Apply();
     }
 
@@ -44,7 +46,7 @@ public class Ground : MonoBehaviour
         //DrawLine(tex, new Vector2(tex.width / 2f, 0), new Vector2(tex.width / 2f, tex.height), Color.clear);
         //DrawLineWeighted(tex, new Vector2(10, 0), new Vector2(80, tex.height), 10, Color.clear);
 
-        DrillLine(new Vector2(0, -5), new Vector2(0, 5), 1);
+        //DrillLine(new Vector2(0, 5), new Vector2(0, -5), 1);
 
         tex.Apply();
     }
@@ -75,17 +77,23 @@ public class Ground : MonoBehaviour
         {
             t = Vector2.Lerp(p1, p2, ctr);
             ctr += frac;
-            tex.SetPixel((int)t.x, (int)t.y, col);
+            int x = (int)t.x;
+            int y = (int)t.y;
+            if (x > -1 && x < tex.width && y > -1 && y < tex.height)
+            {
+                tex.SetPixel(x, y, col);
+            }
         }
     }
     private static void DrawLineWeighted(Texture2D tex, Vector2 p1, Vector2 p2, int w, Color col)
     {
+        int leftW = Mathf.FloorToInt(w / 2f);
+        int rightW = Mathf.CeilToInt(w / 2f);
+
         Vector2 normal = Vector3.Cross(p2 - p1, Vector3.forward).normalized;
-        for (int x = 0; x < w; ++x)
+        for (int x = -leftW; x < rightW; ++x)
         {
-            DrawLine(tex, p1, p2, col);
-            p1 += normal;
-            p2 += normal;
+            DrawLine(tex, p1 + normal * x, p2 + normal * x, col);
         }
     }
     private static void FillTexture(Texture2D tex, Color color)
