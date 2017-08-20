@@ -6,8 +6,8 @@ public enum GroundState { UnDug, Dug, None }
 
 public class Ground : MonoBehaviour
 {
-    public Color groundColor = Color.white;
-    private Color emptyColor = Color.clear;
+    public Color unDugColor = Color.white;
+    private Color dugColor = Color.clear;
 
     private SpriteRenderer sRenderer;
     private Sprite sprite;
@@ -61,12 +61,57 @@ public class Ground : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// Returns whether any ground was dug successfully
+    /// </summary>
+    /// <param name="sr"></param>
+    /// <returns></returns>
+    public bool DigWithSprite(SpriteRenderer sr)
+    {
+        // TODO: interpolate texPos instead of worldPos to avoid calls to WorldToTexPos
+
+        // Check if sprite bounds overlap ground bounds at all
+        if (!BoundsOverlap(sr.bounds))
+        {
+            return false;
+        }
+
+        //  Pixel by pixel
+        Vector2 pos = sr.transform.TransformPoint(sr.sprite.bounds.min); // world pos of current sprite pixel
+        Vector2 dx = sr.transform.TransformVector(new Vector2(1f / sr.sprite.pixelsPerUnit, 0));
+        Vector2 dy = sr.transform.TransformVector(new Vector2(0, 1f / sr.sprite.pixelsPerUnit));
+
+        bool dugAny = false;
+
+        for (int x = 0; x < sr.sprite.texture.width; ++x)
+        {
+            for (int y = 0; y < sr.sprite.texture.height; ++y)
+            {
+                if (sr.sprite.texture.GetPixel(x, y).a > 0)
+                {
+                    Vector2 texPos = WorldToTexPos(pos);
+                    if (GetStateAtTexPos(texPos) == GroundState.UnDug)
+                    {
+                        // Dig
+                        DigAt(texPos);
+                        dugAny = true;
+                    }
+                }
+                pos += dy;
+            }
+            pos -= dy * sr.sprite.texture.width;
+            pos += dx;
+        }
+
+        tex.Apply();
+        return dugAny;
+    }
     public void DrillLine(Vector2 p1, Vector2 p2, float width)
     {
         int weight = Mathf.CeilToInt(resolution * width);
 
         DrawLineWeighted(tex, WorldToTexPos(p1), WorldToTexPos(p2),
-            weight, emptyColor);
+            weight, dugColor);
         tex.Apply();
     }
 
@@ -81,17 +126,17 @@ public class Ground : MonoBehaviour
 
         tex = new Texture2D((int)(resolution*width), (int)(resolution*height), TextureFormat.RGBA32, false);
         tex.filterMode = FilterMode.Point;
-        FillTexture(tex, groundColor);
+        FillTexture(tex, unDugColor);
 
         sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
         sRenderer.sprite = sprite;
         sRenderer.color = Color.white;
 
-        //DrawLine(tex, new Vector2(0, 0), new Vector2(tex.width, tex.height), emptyColor);
-        //DrawLine(tex, new Vector2(0, 1), new Vector2(tex.width - 1, tex.height), emptyColor);
-        //DrawLine(tex, new Vector2(0, tex.height / 2f), new Vector2(tex.width, tex.height / 2f), emptyColor);
-        //DrawLine(tex, new Vector2(tex.width / 2f, 0), new Vector2(tex.width / 2f, tex.height), emptyColor);
-        //DrawLineWeighted(tex, new Vector2(10, 0), new Vector2(80, tex.height), 10, emptyColor);
+        //DrawLine(tex, new Vector2(0, 0), new Vector2(tex.width, tex.height), dugColor);
+        //DrawLine(tex, new Vector2(0, 1), new Vector2(tex.width - 1, tex.height), dugColor);
+        //DrawLine(tex, new Vector2(0, tex.height / 2f), new Vector2(tex.width, tex.height / 2f), dugColor);
+        //DrawLine(tex, new Vector2(tex.width / 2f, 0), new Vector2(tex.width / 2f, tex.height), dugColor);
+        //DrawLineWeighted(tex, new Vector2(10, 0), new Vector2(80, tex.height), 10, dugColor);
 
         //DrillLine(new Vector2(0, 5), new Vector2(0, -5), 1);
 
@@ -113,7 +158,7 @@ public class Ground : MonoBehaviour
             // Out of ground bounds
             return GroundState.None;
         }
-        return tex.GetPixel((int)texPos.x, (int)texPos.y) == emptyColor ?
+        return tex.GetPixel((int)texPos.x, (int)texPos.y) == dugColor ?
             GroundState.Dug : GroundState.UnDug;
     }
     private bool BoundsOverlap(Bounds otherBounds)
@@ -121,6 +166,23 @@ public class Ground : MonoBehaviour
         return sRenderer.bounds.Intersects(otherBounds);
     }
 
+    /// <summary>
+    /// Does not call tex.apply
+    /// </summary>
+    /// <param name="texPos"></param>
+    private void DigAt(Vector2 texPos)
+    {
+        tex.SetPixel((int)texPos.x, (int)texPos.y, dugColor);
+    }
+    /// <summary>
+    /// Does not call tex.apply
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    private void DigAt(int x, int y)
+    {
+        tex.SetPixel(x, y, dugColor);
+    }
     /// <summary>
     /// http://answers.unity3d.com/questions/244417/create-line-on-a-texture.html
     /// </summary>

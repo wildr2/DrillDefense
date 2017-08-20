@@ -5,30 +5,49 @@ using UnityEngine;
 public class Drill : MonoBehaviour
 {
     private float speed = 1; // units per second
-    private Ground ground;
+    public float fallGravity = 1;
+    private float fallTime = 0;
+    private const float maxFallTime = 5;
+
+    private Rigidbody2D rb;
     public SpriteRenderer colliderSprite;
+
+    private Ground ground;
+    
 
     private void Awake()
     {
         ground = FindObjectOfType<Ground>();
+        rb = GetComponent<Rigidbody2D>();
     }
     private void Update()
     {
-        Vector2 oldPos = transform.position;
-        Vector2 heading = -transform.up;
-        Vector2 velocity = heading * speed;
-        transform.Translate(velocity * Time.deltaTime, Space.World);
+        // Dig
+        bool dug = ground.DigWithSprite(colliderSprite);
 
-        //if (ground.IsGround(transform.position))
-        //{
-        //    ground.DrillLine(oldPos, transform.position, 1);
-        //    Debug.DrawLine(transform.position, (Vector2)transform.position + heading, Color.red);
-        //}
-
-        if (ground.SpriteOverlaps(colliderSprite))
+        if (dug)
         {
-            Debug.DrawLine(transform.position, (Vector2)transform.position + heading, Color.red);
-        }
+            if (rb.gravityScale != 0)
+            {
+                // Stop falling
+                rb.gravityScale = 0;
+                fallTime = 0;
+            }
 
+            // Move Forwards
+            Vector2 heading = -transform.up;
+            rb.velocity = heading * speed;
+        }
+        else
+        {
+            // Fall
+            rb.gravityScale = fallGravity * 0.25f;
+            fallTime += Time.deltaTime;
+            if (fallTime > maxFallTime)
+            {
+                Destroy(gameObject);
+            }
+        }
+        
     }
 }
