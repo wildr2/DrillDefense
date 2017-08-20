@@ -6,8 +6,9 @@ public enum GroundState { UnDug, Dug, None }
 
 public class Ground : MonoBehaviour
 {
-    public Color unDugColor = Color.white;
-    private Color dugColor = Color.clear;
+    public Color dirtColor = Color.black;
+    public Color grassColor = Color.green;
+    private Color clearColor = Color.clear;
 
     private SpriteRenderer sRenderer;
     private Sprite sprite;
@@ -17,7 +18,9 @@ public class Ground : MonoBehaviour
     private float[] topHeightMap, botHeightMap; 
 
     private float width, height; // world units
+    private float grassHeight = 0.3f; // world units
     private float resolution = 15; // pixels per world unit
+    
 
 
     public float GetHeightAt(float worldPosX, bool top)
@@ -155,7 +158,7 @@ public class Ground : MonoBehaviour
         int weight = Mathf.CeilToInt(resolution * width);
 
         DrawLineWeighted(tex, WorldToTexPos(p1), WorldToTexPos(p2),
-            weight, dugColor);
+            weight, clearColor);
         tex.Apply();
     }
 
@@ -206,20 +209,23 @@ public class Ground : MonoBehaviour
     }
     private void DrawInitialTexture()
     {
+        int grassPixels = (int)(grassHeight * resolution);
+
         for (int x = 0; x < tex.width; ++x)
         {
-            for (int y = 0; y < botHeightMap[x]; ++y)
-            {
-                tex.SetPixel(x, y, dugColor);
-            }
-            for (int y = (int)botHeightMap[x]; y < topHeightMap[x]; ++y)
-            {
-                tex.SetPixel(x, y, unDugColor);
-            }
-            for (int y = (int)topHeightMap[x]; y < tex.height; ++y)
-            {
-                tex.SetPixel(x, y, dugColor);
-            }
+            int botGrassEnd = (int)botHeightMap[x] + grassPixels;
+            int topGrassStart = (int)topHeightMap[x] - grassPixels;
+
+            for (int y = 0; y < botHeightMap[x]; ++y) // clear
+                tex.SetPixel(x, y, clearColor);
+            for (int y = (int)botHeightMap[x]; y < botGrassEnd; ++y) // grass
+                tex.SetPixel(x, y, grassColor);
+            for (int y = botGrassEnd; y < topGrassStart; ++y) // dirt
+                tex.SetPixel(x, y, dirtColor);
+            for (int y = topGrassStart; y < topHeightMap[x]; ++y) // grass
+                tex.SetPixel(x, y, grassColor);
+            for (int y = (int)topHeightMap[x]; y < tex.height; ++y) // clear
+                tex.SetPixel(x, y, clearColor);
         }
     }
 
@@ -238,7 +244,7 @@ public class Ground : MonoBehaviour
             // Out of ground bounds
             return GroundState.None;
         }
-        return tex.GetPixel((int)texPos.x, (int)texPos.y) == dugColor ?
+        return tex.GetPixel((int)texPos.x, (int)texPos.y) == clearColor ?
             GroundState.Dug : GroundState.UnDug;
     }
     private bool BoundsOverlap(Bounds otherBounds)
@@ -252,7 +258,7 @@ public class Ground : MonoBehaviour
     /// <param name="texPos"></param>
     private void DigAt(Vector2 texPos)
     {
-        tex.SetPixel((int)texPos.x, (int)texPos.y, dugColor);
+        tex.SetPixel((int)texPos.x, (int)texPos.y, clearColor);
     }
     /// <summary>
     /// Does not call tex.apply
@@ -261,7 +267,7 @@ public class Ground : MonoBehaviour
     /// <param name="y"></param>
     private void DigAt(int x, int y)
     {
-        tex.SetPixel(x, y, dugColor);
+        tex.SetPixel(x, y, clearColor);
     }
     /// <summary>
     /// http://answers.unity3d.com/questions/244417/create-line-on-a-texture.html
