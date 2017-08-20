@@ -12,6 +12,10 @@ public class Ground : MonoBehaviour
     private SpriteRenderer sRenderer;
     private Sprite sprite;
     private Texture2D tex;
+
+    // number of pixels high (from bottom of image) for each pixel along horizontal
+    private int[] topHeightMap, botHeightMap; 
+
     private float width, height; // world units
     private float resolution = 10; // pixels per world unit
 
@@ -118,29 +122,65 @@ public class Ground : MonoBehaviour
 
     private void Awake()
     {
-        sRenderer = GetComponent<SpriteRenderer>();
-
+        // Choose width and height
         width = transform.localScale.x;
         height = transform.localScale.y;
         transform.localScale = new Vector3(1, 1, 1);
 
-        tex = new Texture2D((int)(resolution*width), (int)(resolution*height), TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Point;
-        FillTexture(tex, unDugColor);
+        // Terrain
+        GenerateTerrain();
 
+        // Setup sprite renderer
+        sRenderer = GetComponent<SpriteRenderer>();
         sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
         sRenderer.sprite = sprite;
         sRenderer.color = Color.white;
+    }
+    private void GenerateTerrain()
+    {
+        int pixelsWide = (int)(resolution * width);
+        int pixelsHigh = (int)(resolution * height);
 
-        //DrawLine(tex, new Vector2(0, 0), new Vector2(tex.width, tex.height), dugColor);
-        //DrawLine(tex, new Vector2(0, 1), new Vector2(tex.width - 1, tex.height), dugColor);
-        //DrawLine(tex, new Vector2(0, tex.height / 2f), new Vector2(tex.width, tex.height / 2f), dugColor);
-        //DrawLine(tex, new Vector2(tex.width / 2f, 0), new Vector2(tex.width / 2f, tex.height), dugColor);
-        //DrawLineWeighted(tex, new Vector2(10, 0), new Vector2(80, tex.height), 10, dugColor);
+        CreateHeightMaps(pixelsWide, pixelsHigh);
 
-        //DrillLine(new Vector2(0, 5), new Vector2(0, -5), 1);
+        tex = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+
+        DrawInitialTexture();
 
         tex.Apply();
+    }
+    private void CreateHeightMaps(int pixelsWide, int pixelsHigh)
+    {
+        topHeightMap = new int[pixelsWide];
+        botHeightMap = new int[pixelsWide];
+
+        for (int i = 0; i < pixelsWide; ++i)
+        {
+            float t = (float)i / pixelsWide;
+            float offset = (Mathf.Sin(t * Mathf.PI * 8f) + 1) * 0.3f;
+
+            topHeightMap[i] = (int)((height - offset) * resolution);
+            botHeightMap[i] = (int)(offset * resolution);
+        }
+    }
+    private void DrawInitialTexture()
+    {
+        for (int x = 0; x < tex.width; ++x)
+        {
+            for (int y = 0; y < botHeightMap[x]; ++y)
+            {
+                tex.SetPixel(x, y, dugColor);
+            }
+            for (int y = botHeightMap[x]; y < topHeightMap[x]; ++y)
+            {
+                tex.SetPixel(x, y, unDugColor);
+            }
+            for (int y = topHeightMap[x]; y < tex.height; ++y)
+            {
+                tex.SetPixel(x, y, dugColor);
+            }
+        }
     }
 
     private Vector2 WorldToTexPos(Vector2 worldPos)
