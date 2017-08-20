@@ -22,6 +22,13 @@ public class Ground : MonoBehaviour
 
     public float GetHeightAt(float worldPosX, bool top)
     {
+        // Check out of bounds
+        if (worldPosX >= sRenderer.bounds.max.x ||
+            worldPosX < sRenderer.bounds.min.x)
+        {
+            return 0;
+        }
+
         // To tex x pos
         float x = worldPosX - transform.position.x;
         x = ((x / width) + 0.5f) * tex.width;
@@ -31,6 +38,28 @@ public class Ground : MonoBehaviour
 
         // To world y pos
         return ((y / tex.height) - 0.5f) * height + transform.position.y;
+    }
+    public Vector2 GetNormalAt(float worldPosX, bool top)
+    {
+        // Check out of bounds
+        if (worldPosX >= sRenderer.bounds.max.x ||
+            worldPosX < sRenderer.bounds.min.x)
+        {
+            return Vector2.zero;
+        }
+
+        // To tex x pos
+        float x = worldPosX - transform.position.x;
+        x = ((x / width) + 0.5f) * tex.width;
+
+        // Nearby tex y positions
+        float y = top ? topHeightMap[(int)x] : botHeightMap[(int)x];
+        float x2 = x == 0 ? x + 1 : x - 1;
+        float y2 = top ? topHeightMap[(int)x2] : botHeightMap[(int)x2];
+
+        // Normal
+        Vector2 tangent = new Vector2(x2 - x, y2 - y);
+        return Vector3.Cross(tangent, Vector3.forward).normalized;
     }
     public GroundState GetStateAt(Vector2 worldPos)
     {

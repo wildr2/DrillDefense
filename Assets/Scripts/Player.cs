@@ -35,7 +35,7 @@ public class Player : MonoBehaviour
             template.position = pos;
 
             // Set template orientation
-
+            template.transform.up = ground.GetNormalAt(pos.x, true);
 
             if (Input.GetMouseButtonDown(0)) // left click
             {
@@ -44,6 +44,7 @@ public class Player : MonoBehaviour
                     // Placed successfully
                     Building b = Instantiate(buildingPrefab);
                     b.transform.position = template.transform.position;
+                    b.transform.rotation = template.transform.rotation;
                     break;
                 }
             }
