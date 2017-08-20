@@ -8,8 +8,12 @@ public class Player : MonoBehaviour
     private float gold = 100;
 
     public DrillHouse drillHousePrefab;
+    private Ground ground;
 
-
+    private void Awake()
+    {
+        ground = FindObjectOfType<Ground>();
+    }
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.H))
@@ -21,11 +25,17 @@ public class Player : MonoBehaviour
     private IEnumerator PlaceBuilding(Building buildingPrefab)
     {
         Transform template = Instantiate(buildingPrefab.templatePrefab);
+        float templateHeight = template.GetComponent<SpriteRenderer>().bounds.extents.y;
 
         while (true)
         {
-            Vector2 mouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            template.position = mouse;
+            // Set template position
+            Vector2 pos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            pos.y = ground.GetHeightAt(pos.x, true) + templateHeight / 2f;
+            template.position = pos;
+
+            // Set template orientation
+
 
             if (Input.GetMouseButtonDown(0)) // left click
             {

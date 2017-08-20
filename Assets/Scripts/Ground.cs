@@ -13,14 +13,25 @@ public class Ground : MonoBehaviour
     private Sprite sprite;
     private Texture2D tex;
 
-    // number of pixels high (from bottom of image) for each pixel along horizontal
-    private int[] topHeightMap, botHeightMap; 
+    // ideal (fractional) number of pixels high (from bottom of image) for each pixel along horizontal
+    private float[] topHeightMap, botHeightMap; 
 
     private float width, height; // world units
-    private float resolution = 10; // pixels per world unit
+    private float resolution = 15; // pixels per world unit
 
 
+    public float GetHeightAt(float worldPosX, bool top)
+    {
+        // To tex x pos
+        float x = worldPosX - transform.position.x;
+        x = ((x / width) + 0.5f) * tex.width;
 
+        // Tex y pos
+        float y = top ? topHeightMap[(int)x] : botHeightMap[(int)x];
+
+        // To world y pos
+        return ((y / tex.height) - 0.5f) * height + transform.position.y;
+    }
     public GroundState GetStateAt(Vector2 worldPos)
     {
         return GetStateAtTexPos(WorldToTexPos(worldPos));
@@ -152,16 +163,16 @@ public class Ground : MonoBehaviour
     }
     private void CreateHeightMaps(int pixelsWide, int pixelsHigh)
     {
-        topHeightMap = new int[pixelsWide];
-        botHeightMap = new int[pixelsWide];
+        topHeightMap = new float[pixelsWide];
+        botHeightMap = new float[pixelsWide];
 
         for (int i = 0; i < pixelsWide; ++i)
         {
             float t = (float)i / pixelsWide;
             float offset = (Mathf.Sin(t * Mathf.PI * 8f) + 1) * 0.3f;
 
-            topHeightMap[i] = (int)((height - offset) * resolution);
-            botHeightMap[i] = (int)(offset * resolution);
+            topHeightMap[i] = (height - offset) * resolution;
+            botHeightMap[i] = offset * resolution;
         }
     }
     private void DrawInitialTexture()
@@ -172,11 +183,11 @@ public class Ground : MonoBehaviour
             {
                 tex.SetPixel(x, y, dugColor);
             }
-            for (int y = botHeightMap[x]; y < topHeightMap[x]; ++y)
+            for (int y = (int)botHeightMap[x]; y < topHeightMap[x]; ++y)
             {
                 tex.SetPixel(x, y, unDugColor);
             }
-            for (int y = topHeightMap[x]; y < tex.height; ++y)
+            for (int y = (int)topHeightMap[x]; y < tex.height; ++y)
             {
                 tex.SetPixel(x, y, dugColor);
             }
