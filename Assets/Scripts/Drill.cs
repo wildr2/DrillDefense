@@ -14,6 +14,15 @@ public class Drill : MonoBehaviour
 
     private Ground ground;
     
+    /// <summary>
+    /// Dir of -1 indicates pointing down, 1 indicates pointing up
+    /// </summary>
+    /// <param name="dir"></param>
+    public void SetDirection(int dir)
+    {
+        fallGravity = -dir;
+        transform.up = -Vector2.up * dir;
+    }
 
     private void Awake()
     {
