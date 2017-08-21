@@ -8,7 +8,7 @@ public class Player : MonoBehaviour
     public int id;
     public bool isTop = true;
     public bool ai = false;
-    private float gold = 50;
+    private float gold = 60;
 
     private LineRenderer aimLine;
 
@@ -34,7 +34,7 @@ public class Player : MonoBehaviour
     private void Update()
     {
         // Gold
-        gold += Time.deltaTime * 3;
+        //gold += Time.deltaTime * 3;
         uiGold.text = Mathf.FloorToInt(gold).ToString();
     }
     private IEnumerator HumanUpdate()
@@ -89,12 +89,17 @@ public class Player : MonoBehaviour
     {
         buildings.Remove(b);
     }
+    private void OnDrillDig(Dictionary<RockType, int> digCount)
+    {
+        gold += digCount[RockType.Gold] / 10f;
+    }
 
     private bool TryLaunchDrill(DrillHouse house)
     {
         if (house.CanLaunchDrill((int)gold))
         {
-            house.LaunchDrill();
+            Drill drill = house.LaunchDrill();
+            drill.onDig += OnDrillDig;
             gold -= DrillHouse.drillCost;
             return true;
         }

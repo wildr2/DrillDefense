@@ -12,10 +12,10 @@ public class DrillHouse : Building
 
     public bool CanLaunchDrill(int gold)
     {
-        return gold > drillCost;
+        return gold >= drillCost;
     }
 
-    public void LaunchDrill()
+    public Drill LaunchDrill()
     {
         Drill drill = Instantiate(drillPrefab);
         drill.transform.position = transform.position - transform.up * 0.5f;
@@ -23,6 +23,8 @@ public class DrillHouse : Building
 
         Physics2D.IgnoreCollision(GetComponent<Collider2D>(),
             drill.GetComponent<Collider2D>());
+
+        return drill;
     }
 
     protected override void Awake()

@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum GroundState { UnDug, Dug, None }
+public enum RockType { None, Any, Dirt, Grass, Gold }
 
 public class Ground : MonoBehaviour
 {
     public Color dirtColor = Color.black;
     public Color grassColor = Color.green;
+    public Color goldColor = Color.yellow;
     private Color clearColor = Color.clear;
 
     public SpriteRenderer spriteR, spriteRBG;
@@ -19,9 +20,9 @@ public class Ground : MonoBehaviour
 
     public float Width { get; private set; } // world units
     public float Height { get; private set; } // world units
-    private float resolution = 15; // pixels per world unit
-    private float grassHeight = 0.2f; // world units
-    private float bgDarkness = 0.3f;
+    public const float resolution = 15; // pixels per world unit
+    private const float grassHeight = 0.2f; // world units
+    private const float bgDarkness = 0.3f;
     
 
 
@@ -68,7 +69,7 @@ public class Ground : MonoBehaviour
         Vector2 n = Vector3.Cross(Vector3.forward, tangent).normalized;
         return top ? n : -n;
     }
-    public GroundState GetStateAt(Vector2 worldPos)
+    public RockType GetStateAt(Vector2 worldPos)
     {
         return GetStateAtTexPos(WorldToTexPos(worldPos));
     }
@@ -77,7 +78,7 @@ public class Ground : MonoBehaviour
     /// </summary>
     /// <param name="tex"></param>
     /// <returns></returns>
-    public bool SpriteOverlaps(SpriteRenderer sr, GroundState state=GroundState.UnDug)
+    public bool SpriteOverlaps(SpriteRenderer sr, RockType state = RockType.Any)
     {
         // TODO: interpolate texPos instead of worldPos to avoid calls to WorldToTexPos
 
@@ -98,7 +99,8 @@ public class Ground : MonoBehaviour
             {
                 if (sr.sprite.texture.GetPixel(x, y).a > 0)
                 {
-                    if (GetStateAt(pos) == state)
+                    RockType rock = GetStateAt(pos);
+                    if ((state == RockType.Any && rock != RockType.None) || rock == state)
                     {
                         return true;
                     }
@@ -117,9 +119,16 @@ public class Ground : MonoBehaviour
     /// </summary>
     /// <param name="sr"></param>
     /// <returns></returns>
-    public bool DigWithSprite(SpriteRenderer sr)
+    public bool DigWithSprite(SpriteRenderer sr, out Dictionary<RockType, int> digCount)
     {
         // TODO: interpolate texPos instead of worldPos to avoid calls to WorldToTexPos
+
+        digCount = new Dictionary<RockType, int>();
+        foreach (RockType rock in Tools.EnumValues(typeof(RockType)))
+        {
+            digCount[rock] = 0;
+        }
+
 
         // Check if sprite bounds overlap ground bounds at all
         if (!BoundsOverlap(sr.bounds))
@@ -141,7 +150,9 @@ public class Ground : MonoBehaviour
                 if (sr.sprite.texture.GetPixel(x, y).a > 0)
                 {
                     Vector2 texPos = WorldToTexPos(pos);
-                    if (GetStateAtTexPos(texPos) == GroundState.UnDug)
+                    RockType rock = GetStateAtTexPos(texPos);
+                    digCount[rock] += 1;
+                    if (rock != RockType.None)
                     {
                         // Dig
                         DigAt(texPos);
@@ -210,6 +221,10 @@ public class Ground : MonoBehaviour
     {
         int grassPixels = (int)(grassHeight * resolution);
 
+        Vector2 perlinGoldStart = (Vector2)Random.onUnitSphere * Random.value * 1000f;
+        Vector2 perlinGold = perlinGoldStart;
+        float perlinGoldThreshold = 0.6f;
+
         for (int x = 0; x < tex.width; ++x)
         {
             int botGrassEnd = (int)botHeightMap[x] + grassPixels;
@@ -219,12 +234,23 @@ public class Ground : MonoBehaviour
                 tex.SetPixel(x, y, clearColor);
             for (int y = (int)botHeightMap[x]; y < botGrassEnd; ++y) // grass
                 tex.SetPixel(x, y, grassColor);
-            for (int y = botGrassEnd; y < topGrassStart; ++y) // dirt
-                tex.SetPixel(x, y, dirtColor);
+            for (int y = botGrassEnd; y < topGrassStart; ++y)
+            {
+                if (Mathf.PerlinNoise(perlinGold.x, perlinGold.y) > perlinGoldThreshold)
+                    tex.SetPixel(x, y, goldColor); // gold
+                else
+                    tex.SetPixel(x, y, dirtColor); // dirt
+
+                perlinGold.y += 0.03f;// + Random.value * 0.04f;
+            }
             for (int y = topGrassStart; y < topHeightMap[x]; ++y) // grass
                 tex.SetPixel(x, y, grassColor);
             for (int y = (int)topHeightMap[x]; y < tex.height; ++y) // clear
                 tex.SetPixel(x, y, clearColor);
+
+
+            perlinGold.x += 0.03f; // + Random.value * 0.04f;
+            perlinGold.y = perlinGoldStart.y;
         }
     }
     private void MakeTexBG()
@@ -262,15 +288,18 @@ public class Ground : MonoBehaviour
         ret.y = ((ret.y / Height) + 0.5f) * tex.height;
         return ret;
     }
-    private GroundState GetStateAtTexPos(Vector2 texPos)
+    private RockType GetStateAtTexPos(Vector2 texPos)
     {
         if (texPos.x < 0 || texPos.x >= tex.width || texPos.y < 0 || texPos.y >= tex.height)
         {
             // Out of ground bounds
-            return GroundState.None;
+            return RockType.None;
         }
-        return tex.GetPixel((int)texPos.x, (int)texPos.y) == clearColor ?
-            GroundState.Dug : GroundState.UnDug;
+        Color pixel = tex.GetPixel((int)texPos.x, (int)texPos.y);
+        return pixel == clearColor ? RockType.None :
+               pixel == dirtColor ? RockType.Dirt :
+               pixel == goldColor ? RockType.Gold :
+               pixel == grassColor ? RockType.Grass : RockType.Any;
     }
     private bool BoundsOverlap(Bounds otherBounds)
     {

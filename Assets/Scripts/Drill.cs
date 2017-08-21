@@ -8,12 +8,16 @@ public class Drill : MonoBehaviour
     public float fallGravity = 1;
     private float fallTime = 0;
     private const float maxFallTime = 5;
+    private float health = 60;
 
     private Rigidbody2D rb;
     public SpriteRenderer colliderSprite;
 
     private Ground ground;
-    
+
+    public System.Action<Dictionary<RockType, int>> onDig;
+
+
     public void SetDirection(Vector2 dir)
     {
         fallGravity = -Vector2.Dot(dir, Vector2.up);
@@ -28,7 +32,8 @@ public class Drill : MonoBehaviour
     private void Update()
     {
         // Dig
-        bool dug = ground.DigWithSprite(colliderSprite);
+        Dictionary<RockType, int> digCount;
+        bool dug = ground.DigWithSprite(colliderSprite, out digCount);
 
         if (dug)
         {
@@ -42,6 +47,11 @@ public class Drill : MonoBehaviour
             // Move Forwards
             Vector2 heading = -transform.up;
             rb.velocity = heading * speed;
+
+            // Decrease Health
+            health -= digCount[RockType.Gold] / 10f;
+
+            if (onDig != null) onDig(digCount);
         }
         else
         {
@@ -53,7 +63,12 @@ public class Drill : MonoBehaviour
                 Destroy(gameObject);
             }
         }
-        
+
+        // Death
+        if (health <= 0)
+        {
+            Destroy(gameObject);
+        }
     }
     protected virtual void OnCollisionEnter2D(Collision2D collision)
     {
