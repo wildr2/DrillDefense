@@ -55,4 +55,12 @@ public class Drill : MonoBehaviour
         }
         
     }
+    protected virtual void OnCollisionEnter2D(Collision2D collision)
+    {
+        Drill drill = collision.collider.GetComponent<Drill>();
+        if (drill != null)
+        {
+            Destroy(gameObject);
+        }
+    }
 }

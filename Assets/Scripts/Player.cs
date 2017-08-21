@@ -14,6 +14,8 @@ public class Player : MonoBehaviour
     public DrillHouse drillHousePrefab;
     private Ground ground;
 
+    private List<Building> buildings = new List<Building>();
+
 
     private void Awake()
     {
@@ -58,15 +60,30 @@ public class Player : MonoBehaviour
     {
         while (true)
         {
-            if (CanBuild(drillHousePrefab))
+            float r = Random.value;
+            if (r < 0.3f)
             {
-                Build(drillHousePrefab, Random.Range(0, ground.Width) - ground.Width / 2f);
+                if (CanBuild(drillHousePrefab))
+                {
+                    Build(drillHousePrefab, Random.Range(0, ground.Width) - ground.Width / 2f);
+                }
             }
+            else if (r < 0.4f && buildings.Count > 0)
+            {
+                int i = Random.Range(0, buildings.Count);
+                DrillHouse b = (DrillHouse)buildings[i];
+                TryLaunchDrill(b);
+            }
+            
                
             yield return new WaitForSeconds(1);
         }
     }
 
+    private void OnBuildingDestroyed(Building b)
+    {
+        buildings.Remove(b);
+    }
 
     private bool TryLaunchDrill(DrillHouse house)
     {
@@ -78,7 +95,6 @@ public class Player : MonoBehaviour
         }
         return false;
     }
-
     private void SetOnSurface(Transform thing, float xPos)
     {
         thing.up = ground.GetNormalAt(xPos, isTop);
@@ -131,6 +147,8 @@ public class Player : MonoBehaviour
     {
         Building b = Instantiate(buildingPrefab);
         SetOnSurface(b.transform, xPos);
+        buildings.Add(b);
+        b.onDestroyed += OnBuildingDestroyed;
 
         gold -= buildingPrefab.Cost;
     }

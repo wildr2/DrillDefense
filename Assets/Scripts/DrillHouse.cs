@@ -20,6 +20,9 @@ public class DrillHouse : Building
         Drill drill = Instantiate(drillPrefab);
         drill.transform.position = transform.position - transform.up * 0.5f;
         drill.SetDirection(-transform.up);
+
+        Physics2D.IgnoreCollision(GetComponent<Collider2D>(),
+            drill.GetComponent<Collider2D>());
     }
 
     protected override void Awake()
