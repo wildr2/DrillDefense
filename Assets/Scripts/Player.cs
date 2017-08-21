@@ -10,6 +10,8 @@ public class Player : MonoBehaviour
     public bool ai = false;
     private float gold = 50;
 
+    private LineRenderer aimLine;
+
     public Text uiGold;
     public DrillHouse drillHousePrefab;
     private Ground ground;
@@ -20,6 +22,9 @@ public class Player : MonoBehaviour
     private void Awake()
     {
         ground = FindObjectOfType<Ground>();
+        aimLine = GetComponent<LineRenderer>();
+
+        aimLine.enabled = false;
     }
     private void Start()
     {
@@ -29,7 +34,7 @@ public class Player : MonoBehaviour
     private void Update()
     {
         // Gold
-        gold += Time.deltaTime * 5;
+        gold += Time.deltaTime * 3;
         uiGold.text = Mathf.FloorToInt(gold).ToString();
     }
     private IEnumerator HumanUpdate()
@@ -106,13 +111,15 @@ public class Player : MonoBehaviour
     {
         // Create building template
         Transform template = Instantiate(buildingPrefab.templatePrefab);
-        //float templateHeight = template.GetComponent<SpriteRenderer>().bounds.extents.y;
+        aimLine.enabled = true;
 
         while (true)
         {
             // Set template position / orientation
             Vector2 mouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             SetOnSurface(template, mouse.x);
+            aimLine.SetPosition(0, template.position);
+            aimLine.SetPosition(1, template.position + -template.up * 20);
 
             // Actions
             if (Input.GetMouseButtonDown(0)) // Build on left click
@@ -129,6 +136,7 @@ public class Player : MonoBehaviour
 
         // Cleanup
         Destroy(template.gameObject);
+        aimLine.enabled = false;
     }
     private bool TryBuild(Building buildingPrefab, float xPos)
     {
