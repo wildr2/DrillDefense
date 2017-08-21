@@ -10,59 +10,63 @@ public class Ground : MonoBehaviour
     public Color grassColor = Color.green;
     private Color clearColor = Color.clear;
 
-    private SpriteRenderer sRenderer;
+    public SpriteRenderer spriteR, spriteRBG;
     private Sprite sprite;
-    private Texture2D tex;
+    private Texture2D tex, texBG;
 
     // ideal (fractional) number of pixels high (from bottom of image) for each pixel along horizontal
     private float[] topHeightMap, botHeightMap; 
 
-    private float width, height; // world units
-    private float grassHeight = 0.3f; // world units
+    public float Width { get; private set; } // world units
+    public float Height { get; private set; } // world units
     private float resolution = 15; // pixels per world unit
+    private float grassHeight = 0.2f; // world units
+    private float bgDarkness = 0.3f;
     
 
 
     public float GetHeightAt(float worldPosX, bool top)
     {
         // Check out of bounds
-        if (worldPosX >= sRenderer.bounds.max.x ||
-            worldPosX < sRenderer.bounds.min.x)
+        if (worldPosX >= spriteR.bounds.max.x ||
+            worldPosX < spriteR.bounds.min.x)
         {
             return 0;
         }
 
         // To tex x pos
         float x = worldPosX - transform.position.x;
-        x = ((x / width) + 0.5f) * tex.width;
+        x = ((x / Width) + 0.5f) * tex.width;
 
         // Tex y pos
         float y = top ? topHeightMap[(int)x] : botHeightMap[(int)x];
 
         // To world y pos
-        return ((y / tex.height) - 0.5f) * height + transform.position.y;
+        return ((y / tex.height) - 0.5f) * Height + transform.position.y;
     }
     public Vector2 GetNormalAt(float worldPosX, bool top)
     {
         // Check out of bounds
-        if (worldPosX >= sRenderer.bounds.max.x ||
-            worldPosX < sRenderer.bounds.min.x)
+        if (worldPosX >= spriteR.bounds.max.x ||
+            worldPosX < spriteR.bounds.min.x)
         {
             return Vector2.zero;
         }
 
         // To tex x pos
         float x = worldPosX - transform.position.x;
-        x = ((x / width) + 0.5f) * tex.width;
+        x = ((x / Width) + 0.5f) * tex.width;
 
         // Nearby tex y positions
+        x = Mathf.Min(x, topHeightMap.Length - 2);
+        float x2 = x + 1;
         float y = top ? topHeightMap[(int)x] : botHeightMap[(int)x];
-        float x2 = x == 0 ? x + 1 : x - 1;
         float y2 = top ? topHeightMap[(int)x2] : botHeightMap[(int)x2];
 
         // Normal
         Vector2 tangent = new Vector2(x2 - x, y2 - y);
-        return Vector3.Cross(tangent, Vector3.forward).normalized;
+        Vector2 n = Vector3.Cross(Vector3.forward, tangent).normalized;
+        return top ? n : -n;
     }
     public GroundState GetStateAt(Vector2 worldPos)
     {
@@ -153,9 +157,9 @@ public class Ground : MonoBehaviour
         tex.Apply();
         return dugAny;
     }
-    public void DrillLine(Vector2 p1, Vector2 p2, float width)
+    public void DrillLine(Vector2 p1, Vector2 p2, float Width)
     {
-        int weight = Mathf.CeilToInt(resolution * width);
+        int weight = Mathf.CeilToInt(resolution * Width);
 
         DrawLineWeighted(tex, WorldToTexPos(p1), WorldToTexPos(p2),
             weight, clearColor);
@@ -165,33 +169,28 @@ public class Ground : MonoBehaviour
 
     private void Awake()
     {
-        // Choose width and height
-        width = transform.localScale.x;
-        height = transform.localScale.y;
+        // Choose Width and Height
+        Width = transform.localScale.x;
+        Height = transform.localScale.y;
         transform.localScale = new Vector3(1, 1, 1);
 
-        // Terrain
-        GenerateTerrain();
-
-        // Setup sprite renderer
-        sRenderer = GetComponent<SpriteRenderer>();
-        sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
-        sRenderer.sprite = sprite;
-        sRenderer.color = Color.white;
+        // Generate
+        MakeTerrain();
+        SetupSprites();
     }
-    private void GenerateTerrain()
+    private void MakeTerrain()
     {
-        int pixelsWide = (int)(resolution * width);
-        int pixelsHigh = (int)(resolution * height);
+        int pixelsWide = (int)(resolution * Width);
+        int pixelsHigh = (int)(resolution * Height);
 
         CreateHeightMaps(pixelsWide, pixelsHigh);
 
         tex = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
         tex.filterMode = FilterMode.Point;
-
         DrawInitialTexture();
-
         tex.Apply();
+
+        MakeTexBG();
     }
     private void CreateHeightMaps(int pixelsWide, int pixelsHigh)
     {
@@ -203,7 +202,7 @@ public class Ground : MonoBehaviour
             float t = (float)i / pixelsWide;
             float offset = (Mathf.Sin(t * Mathf.PI * 8f) + 1) * 0.3f;
 
-            topHeightMap[i] = (height - offset) * resolution;
+            topHeightMap[i] = (Height - offset) * resolution;
             botHeightMap[i] = offset * resolution;
         }
     }
@@ -228,13 +227,39 @@ public class Ground : MonoBehaviour
                 tex.SetPixel(x, y, clearColor);
         }
     }
+    private void MakeTexBG()
+    {
+        texBG = new Texture2D(tex.width, tex.height);
+        texBG.filterMode = FilterMode.Point;
+
+        Color[] colors = tex.GetPixels();
+        for (int i = 0; i < colors.Length; ++i)
+        {
+            if (colors[i].a > 0)
+                colors[i] = Color.Lerp(colors[i], Color.black, bgDarkness);
+        }
+        texBG.SetPixels(colors);
+        texBG.Apply();
+    }
+
+    private void SetupSprites()
+    {
+        // Foreground
+        sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
+        spriteR.sprite = sprite;
+        spriteR.color = Color.white;
+
+        // Background
+        spriteRBG.sprite = Sprite.Create(texBG, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
+        spriteRBG.color = Color.white;
+    }
 
     private Vector2 WorldToTexPos(Vector2 worldPos)
     {
         Vector2 ret = worldPos;
         ret -= (Vector2)transform.position;
-        ret.x = ((ret.x / width) + 0.5f) * tex.width;
-        ret.y = ((ret.y / height) + 0.5f) * tex.height;
+        ret.x = ((ret.x / Width) + 0.5f) * tex.width;
+        ret.y = ((ret.y / Height) + 0.5f) * tex.height;
         return ret;
     }
     private GroundState GetStateAtTexPos(Vector2 texPos)
@@ -249,7 +274,7 @@ public class Ground : MonoBehaviour
     }
     private bool BoundsOverlap(Bounds otherBounds)
     {
-        return sRenderer.bounds.Intersects(otherBounds);
+        return spriteR.bounds.Intersects(otherBounds);
     }
 
     /// <summary>

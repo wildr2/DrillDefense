@@ -4,14 +4,13 @@ using UnityEngine;
 
 public abstract class Building : MonoBehaviour
 {
-    protected SpriteRenderer sRenderer;
+    protected SpriteRenderer spriteR;
+    public Transform templatePrefab;
     public abstract int Cost { get; }
 
-    public Transform templatePrefab;
 
-
-    protected void Awake()
+    protected virtual void Awake()
     {
-        sRenderer = GetComponent<SpriteRenderer>();
+        spriteR = GetComponentInChildren<SpriteRenderer>();
     }
 }

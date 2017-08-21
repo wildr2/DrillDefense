@@ -1,56 +1,110 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Player : MonoBehaviour
 {
     public int id;
-    private float gold = 100;
+    public bool isTop = true;
+    public bool ai = false;
+    private float gold = 50;
 
+    public Text uiGold;
     public DrillHouse drillHousePrefab;
     private Ground ground;
+
 
     private void Awake()
     {
         ground = FindObjectOfType<Ground>();
     }
+    private void Start()
+    {
+        if (ai) StartCoroutine(AIUpdate());
+        else StartCoroutine(HumanUpdate());
+    }
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.H))
+        // Gold
+        gold += Time.deltaTime * 5;
+        uiGold.text = Mathf.FloorToInt(gold).ToString();
+    }
+    private IEnumerator HumanUpdate()
+    {
+        while (true)
         {
-            StartCoroutine(PlaceBuilding(drillHousePrefab));
+            // Build
+            if (Input.GetKeyDown(KeyCode.H))
+            {
+                StartCoroutine(PlaceBuilding(drillHousePrefab));
+            }
+
+            // Click on building
+            if (Input.GetMouseButtonDown(0))
+            {
+                Vector2 mouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+                Collider2D col = Physics2D.OverlapPoint(mouse);
+                if (col != null)
+                {
+                    DrillHouse house = col.GetComponent<DrillHouse>();
+                    if (house != null) TryLaunchDrill(house);
+                }
+            }
+            yield return null;
         }
+    }
+    private IEnumerator AIUpdate()
+    {
+        while (true)
+        {
+            if (CanBuild(drillHousePrefab))
+            {
+                Build(drillHousePrefab, Random.Range(0, ground.Width) - ground.Width / 2f);
+            }
+               
+            yield return new WaitForSeconds(1);
+        }
+    }
+
+
+    private bool TryLaunchDrill(DrillHouse house)
+    {
+        if (house.CanLaunchDrill((int)gold))
+        {
+            house.LaunchDrill();
+            gold -= DrillHouse.drillCost;
+            return true;
+        }
+        return false;
+    }
+
+    private void SetOnSurface(Transform thing, float xPos)
+    {
+        thing.up = ground.GetNormalAt(xPos, isTop);
+        thing.position = new Vector2(xPos, ground.GetHeightAt(xPos, isTop));
+        thing.position -= thing.up * 0.1f;
     }
 
     private IEnumerator PlaceBuilding(Building buildingPrefab)
     {
+        // Create building template
         Transform template = Instantiate(buildingPrefab.templatePrefab);
-        float templateHeight = template.GetComponent<SpriteRenderer>().bounds.extents.y;
+        //float templateHeight = template.GetComponent<SpriteRenderer>().bounds.extents.y;
 
         while (true)
         {
-            // Set template position
-            Vector2 pos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            pos.y = ground.GetHeightAt(pos.x, true) + templateHeight / 2f;
-            template.position = pos;
+            // Set template position / orientation
+            Vector2 mouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            SetOnSurface(template, mouse.x);
 
-            // Set template orientation
-            template.transform.up = ground.GetNormalAt(pos.x, true);
-
-            if (Input.GetMouseButtonDown(0)) // left click
+            // Actions
+            if (Input.GetMouseButtonDown(0)) // Build on left click
             {
-                if (gold > buildingPrefab.Cost)
-                {
-                    // Placed successfully
-                    Building b = Instantiate(buildingPrefab);
-                    b.transform.position = template.transform.position;
-                    b.transform.rotation = template.transform.rotation;
-                    break;
-                }
+                if (TryBuild(buildingPrefab, template.position.x)) break;
             }
-            else if (Input.GetMouseButtonDown(1))
+            else if (Input.GetMouseButtonDown(1)) // Cancel on right click
             {
-                // Cancel
                 break;
             }
 
@@ -59,5 +113,25 @@ public class Player : MonoBehaviour
 
         // Cleanup
         Destroy(template.gameObject);
+    }
+    private bool TryBuild(Building buildingPrefab, float xPos)
+    {
+        if (CanBuild(buildingPrefab))
+        {
+            Build(buildingPrefab, xPos);
+            return true;
+        }
+        return false;
+    }
+    private bool CanBuild(Building buildingPrefab)
+    {
+        return gold >= buildingPrefab.Cost;
+    }
+    private void Build(Building buildingPrefab, float xPos)
+    {
+        Building b = Instantiate(buildingPrefab);
+        SetOnSurface(b.transform, xPos);
+
+        gold -= buildingPrefab.Cost;
     }
 }
