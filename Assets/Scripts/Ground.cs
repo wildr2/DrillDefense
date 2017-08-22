@@ -2,29 +2,39 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum RockType { None, Any, Dirt, Grass, Gold }
+public enum RockType { None, Any, Dirt, Grass, Gold, Hardrock }
 
 public class Ground : MonoBehaviour
 {
+    // Colors
     public Color dirtColor = Color.black;
     public Color grassColor = Color.green;
     public Color goldColor = Color.yellow;
+    public Color hardrockColor = Color.black;
     private Color clearColor = Color.clear;
 
+    // Rendering
     public SpriteRenderer spriteR, spriteRBG;
     private Sprite sprite;
     private Texture2D tex, texBG;
 
-    // ideal (fractional) number of pixels high (from bottom of image) for each pixel along horizontal
-    private float[] topHeightMap, botHeightMap; 
-
+    // Measurements
     public float Width { get; private set; } // world units
     public float Height { get; private set; } // world units
+    private int pixelsWide, pixelsHigh; // ground units (pixels)
     public const float resolution = 15; // pixels per world unit
     private const float grassHeight = 0.2f; // world units
-    private const float bgDarkness = 0.3f;
+    private const float bgDarkness = 0.6f;
+
+    // Data
+    private RockType[][] data; // rock type for each pixel ([x][y] ground units)
+    /// <summary>
+    /// ideal (fractional) number of pixels (of tex) high (from bottom of image) for each pixel along horizontal
+    /// </summary>
+    private float[] topHeightMap, botHeightMap;
     
 
+    // PUBLIC ACCESSORS
 
     public float GetHeightAt(float worldPosX, bool top)
     {
@@ -35,15 +45,15 @@ public class Ground : MonoBehaviour
             return 0;
         }
 
-        // To tex x pos
+        // To ground x pos
         float x = worldPosX - transform.position.x;
-        x = ((x / Width) + 0.5f) * tex.width;
+        x = ((x / Width) + 0.5f) * pixelsWide;
 
-        // Tex y pos
+        // Ground y pos
         float y = top ? topHeightMap[(int)x] : botHeightMap[(int)x];
 
         // To world y pos
-        return ((y / tex.height) - 0.5f) * Height + transform.position.y;
+        return ((y / pixelsHigh) - 0.5f) * Height + transform.position.y;
     }
     public Vector2 GetNormalAt(float worldPosX, bool top)
     {
@@ -56,7 +66,7 @@ public class Ground : MonoBehaviour
 
         // To tex x pos
         float x = worldPosX - transform.position.x;
-        x = ((x / Width) + 0.5f) * tex.width;
+        x = ((x / Width) + 0.5f) * pixelsWide;
 
         // Nearby tex y positions
         x = Mathf.Min(x, topHeightMap.Length - 2);
@@ -69,9 +79,9 @@ public class Ground : MonoBehaviour
         Vector2 n = Vector3.Cross(Vector3.forward, tangent).normalized;
         return top ? n : -n;
     }
-    public RockType GetStateAt(Vector2 worldPos)
+    public RockType GetRockTypeAt(Vector2 worldPos)
     {
-        return GetStateAtTexPos(WorldToTexPos(worldPos));
+        return GetRockTypeAtGPos(WorldToGroundPos(worldPos));
     }
     /// <summary>
     /// Return whether any non-transparent pixels in a sprite overlap ground in specified state
@@ -80,7 +90,7 @@ public class Ground : MonoBehaviour
     /// <returns></returns>
     public bool SpriteOverlaps(SpriteRenderer sr, RockType state = RockType.Any)
     {
-        // TODO: interpolate texPos instead of worldPos to avoid calls to WorldToTexPos
+        // TODO: interpolate groundPos instead of worldPos to avoid calls to WorldToGroundPos
 
         // Check if sprite bounds overlap ground bounds at all
         if (!BoundsOverlap(sr.bounds))
@@ -99,7 +109,7 @@ public class Ground : MonoBehaviour
             {
                 if (sr.sprite.texture.GetPixel(x, y).a > 0)
                 {
-                    RockType rock = GetStateAt(pos);
+                    RockType rock = GetRockTypeAt(pos);
                     if ((state == RockType.Any && rock != RockType.None) || rock == state)
                     {
                         return true;
@@ -114,6 +124,9 @@ public class Ground : MonoBehaviour
         return false;
     }
 
+
+    // PUBLIC MODIFIERS
+
     /// <summary>
     /// Returns whether any ground was dug successfully
     /// </summary>
@@ -121,7 +134,7 @@ public class Ground : MonoBehaviour
     /// <returns></returns>
     public bool DigWithSprite(SpriteRenderer sr, out Dictionary<RockType, int> digCount)
     {
-        // TODO: interpolate texPos instead of worldPos to avoid calls to WorldToTexPos
+        // TODO: interpolate groundPos instead of worldPos to avoid calls to WorldToGroundPos
 
         digCount = new Dictionary<RockType, int>();
         foreach (RockType rock in Tools.EnumValues(typeof(RockType)))
@@ -149,13 +162,13 @@ public class Ground : MonoBehaviour
             {
                 if (sr.sprite.texture.GetPixel(x, y).a > 0)
                 {
-                    Vector2 texPos = WorldToTexPos(pos);
-                    RockType rock = GetStateAtTexPos(texPos);
+                    Vector2 groundPos = WorldToGroundPos(pos);
+                    RockType rock = GetRockTypeAtGPos(groundPos);
                     digCount[rock] += 1;
                     if (rock != RockType.None)
                     {
                         // Dig
-                        DigAt(texPos);
+                        DigAt(groundPos);
                         dugAny = true;
                     }
                 }
@@ -172,38 +185,87 @@ public class Ground : MonoBehaviour
     {
         int weight = Mathf.CeilToInt(resolution * Width);
 
-        DrawLineWeighted(tex, WorldToTexPos(p1), WorldToTexPos(p2),
+        DrawLineWeighted(tex, WorldToGroundPos(p1), WorldToGroundPos(p2),
             weight, clearColor);
         tex.Apply();
     }
 
 
+    // PRIVATE MODIFIERS
+
     private void Awake()
     {
-        // Choose Width and Height
+        // Determine width and height (world units)
         Width = transform.localScale.x;
         Height = transform.localScale.y;
         transform.localScale = new Vector3(1, 1, 1);
 
         // Generate
         MakeTerrain();
-        SetupSprites();
+        MakeTextures();
+        MakeSprites();
     }
     private void MakeTerrain()
     {
-        int pixelsWide = (int)(resolution * Width);
-        int pixelsHigh = (int)(resolution * Height);
+        pixelsWide = (int)(resolution * Width);
+        pixelsHigh = (int)(resolution * Height);
+        int grassPixels = (int)(grassHeight * resolution);
 
-        CreateHeightMaps(pixelsWide, pixelsHigh);
+        CreateHeightMaps();
 
-        tex = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Point;
-        DrawInitialTexture();
-        tex.Apply();
+        // Fill Data
+        data = new RockType[pixelsWide][];
 
-        MakeTexBG();
+        Vector2 perlinGoldStart = (Vector2)Random.onUnitSphere * Random.value * 1000f;
+        Vector2 perlinGold = perlinGoldStart;
+        float perlinGoldThreshold = 0.6f;
+
+        Vector2 perlinHardStart = (Vector2)Random.onUnitSphere * Random.value * 1000f;
+        Vector2 perlinHard = perlinHardStart;
+        float perlinHardThreshold = 0.6f;
+
+        for (int x = 0; x < pixelsWide; ++x)
+        {
+            data[x] = new RockType[pixelsHigh];
+
+            int botGrassEnd = (int)botHeightMap[x] + grassPixels;
+            int topGrassStart = (int)topHeightMap[x] - grassPixels;
+
+            // Clear Space
+            for (int y = 0; y < botHeightMap[x]; ++y)
+                data[x][y] = RockType.None;
+
+            for (int y = (int)topHeightMap[x]; y < pixelsHigh; ++y)
+                data[x][y] = RockType.None;
+
+            // Grass
+            for (int y = (int)botHeightMap[x]; y < botGrassEnd; ++y)
+                data[x][y] = RockType.Grass;
+
+            for (int y = topGrassStart; y < topHeightMap[x]; ++y)
+                data[x][y] = RockType.Grass;
+
+            // Dirt, Gold, Hardrock
+            for (int y = botGrassEnd; y < topGrassStart; ++y)
+            {
+                if (Mathf.PerlinNoise(perlinHard.x, perlinHard.y) > perlinHardThreshold)
+                    data[x][y] = RockType.Hardrock; // hardrock
+                else if (Mathf.PerlinNoise(perlinGold.x, perlinGold.y) > perlinGoldThreshold)
+                    data[x][y] = RockType.Gold; // gold
+                else
+                    data[x][y] = RockType.Dirt; // dirt
+
+                perlinGold.y += 0.03f;
+                perlinHard.y += 0.02f;
+            }
+
+            perlinGold.x += 0.03f;
+            perlinGold.y = perlinGoldStart.y;
+            perlinHard.x += 0.02f;
+            perlinHard.y = perlinHardStart.y;
+        }
     }
-    private void CreateHeightMaps(int pixelsWide, int pixelsHigh)
+    private void CreateHeightMaps()
     {
         topHeightMap = new float[pixelsWide];
         botHeightMap = new float[pixelsWide];
@@ -217,58 +279,42 @@ public class Ground : MonoBehaviour
             botHeightMap[i] = offset * resolution;
         }
     }
-    private void DrawInitialTexture()
+    private void MakeTextures()
     {
-        int grassPixels = (int)(grassHeight * resolution);
-
-        Vector2 perlinGoldStart = (Vector2)Random.onUnitSphere * Random.value * 1000f;
-        Vector2 perlinGold = perlinGoldStart;
-        float perlinGoldThreshold = 0.6f;
-
-        for (int x = 0; x < tex.width; ++x)
-        {
-            int botGrassEnd = (int)botHeightMap[x] + grassPixels;
-            int topGrassStart = (int)topHeightMap[x] - grassPixels;
-
-            for (int y = 0; y < botHeightMap[x]; ++y) // clear
-                tex.SetPixel(x, y, clearColor);
-            for (int y = (int)botHeightMap[x]; y < botGrassEnd; ++y) // grass
-                tex.SetPixel(x, y, grassColor);
-            for (int y = botGrassEnd; y < topGrassStart; ++y)
-            {
-                if (Mathf.PerlinNoise(perlinGold.x, perlinGold.y) > perlinGoldThreshold)
-                    tex.SetPixel(x, y, goldColor); // gold
-                else
-                    tex.SetPixel(x, y, dirtColor); // dirt
-
-                perlinGold.y += 0.03f;// + Random.value * 0.04f;
-            }
-            for (int y = topGrassStart; y < topHeightMap[x]; ++y) // grass
-                tex.SetPixel(x, y, grassColor);
-            for (int y = (int)topHeightMap[x]; y < tex.height; ++y) // clear
-                tex.SetPixel(x, y, clearColor);
-
-
-            perlinGold.x += 0.03f; // + Random.value * 0.04f;
-            perlinGold.y = perlinGoldStart.y;
-        }
-    }
-    private void MakeTexBG()
-    {
+        tex = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
         texBG = new Texture2D(tex.width, tex.height);
         texBG.filterMode = FilterMode.Point;
 
-        Color[] colors = tex.GetPixels();
-        for (int i = 0; i < colors.Length; ++i)
+        // FIll texture from data
+        int numPixels = pixelsWide * pixelsHigh;
+        Color[] colors = new Color[numPixels];
+        Color[] colorsBG = new Color[numPixels];
+        int i = 0;
+
+        for (int y = 0; y < pixelsHigh; ++y)
         {
-            if (colors[i].a > 0)
-                colors[i] = Color.Lerp(colors[i], Color.black, bgDarkness);
+            for (int x = 0; x < pixelsWide; ++x)
+            {
+                RockType rock = data[x][y];
+                colors[i] = rock == RockType.None ? clearColor :
+                            rock == RockType.Dirt ? dirtColor :
+                            rock == RockType.Gold ? goldColor :
+                            rock == RockType.Grass ? grassColor :
+                            rock == RockType.Hardrock ? hardrockColor : Color.red;
+
+                colorsBG[i] = rock == RockType.None ? clearColor :
+                    Color.Lerp(colors[i], Color.black, bgDarkness);
+
+                ++i;
+            }
         }
-        texBG.SetPixels(colors);
+        tex.SetPixels(colors);
+        tex.Apply();
+        texBG.SetPixels(colorsBG);
         texBG.Apply();
     }
-
-    private void SetupSprites()
+    private void MakeSprites()
     {
         // Foreground
         sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
@@ -280,49 +326,49 @@ public class Ground : MonoBehaviour
         spriteRBG.color = Color.white;
     }
 
-    private Vector2 WorldToTexPos(Vector2 worldPos)
+    private void DigAt(Vector2 groundPos)
+    {
+        DigAt((int)groundPos.x, (int)groundPos.y);
+    }
+    private void DigAt(int x, int y)
+    {
+        data[x][y] = RockType.None;
+        tex.SetPixel(x, y, clearColor);
+    }
+
+
+    // PRIVATE ACCESSORS
+    
+    private Vector2 WorldToGroundPos(Vector2 worldPos)
     {
         Vector2 ret = worldPos;
         ret -= (Vector2)transform.position;
-        ret.x = ((ret.x / Width) + 0.5f) * tex.width;
-        ret.y = ((ret.y / Height) + 0.5f) * tex.height;
+        ret.x = ((ret.x / Width) + 0.5f) * pixelsWide;
+        ret.y = ((ret.y / Height) + 0.5f) * pixelsHigh;
         return ret;
     }
-    private RockType GetStateAtTexPos(Vector2 texPos)
+    private RockType GetRockTypeAtGPos(Vector2 groundPos)
     {
-        if (texPos.x < 0 || texPos.x >= tex.width || texPos.y < 0 || texPos.y >= tex.height)
+        return GetRockTypeAtGPos((int)groundPos.x, (int)groundPos.y);
+    }
+    private RockType GetRockTypeAtGPos(int groundX, int groundY)
+    {
+        if (groundX < 0 || groundX >= data.Length || groundY < 0 || groundY >= data[0].Length)
         {
             // Out of ground bounds
             return RockType.None;
         }
-        Color pixel = tex.GetPixel((int)texPos.x, (int)texPos.y);
-        return pixel == clearColor ? RockType.None :
-               pixel == dirtColor ? RockType.Dirt :
-               pixel == goldColor ? RockType.Gold :
-               pixel == grassColor ? RockType.Grass : RockType.Any;
+        return data[groundX][groundY];
     }
+
     private bool BoundsOverlap(Bounds otherBounds)
     {
         return spriteR.bounds.Intersects(otherBounds);
     }
 
-    /// <summary>
-    /// Does not call tex.apply
-    /// </summary>
-    /// <param name="texPos"></param>
-    private void DigAt(Vector2 texPos)
-    {
-        tex.SetPixel((int)texPos.x, (int)texPos.y, clearColor);
-    }
-    /// <summary>
-    /// Does not call tex.apply
-    /// </summary>
-    /// <param name="x"></param>
-    /// <param name="y"></param>
-    private void DigAt(int x, int y)
-    {
-        tex.SetPixel(x, y, clearColor);
-    }
+
+    // STATIC HELPERS
+
     /// <summary>
     /// http://answers.unity3d.com/questions/244417/create-line-on-a-texture.html
     /// </summary>
