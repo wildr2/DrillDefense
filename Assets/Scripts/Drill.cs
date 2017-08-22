@@ -50,7 +50,7 @@ public class Drill : MonoBehaviour
 
             // Decrease Health
             health -= digCount[RockType.Gold] / 10f;
-            health -= digCount[RockType.Hardrock];
+            health -= digCount[RockType.Hardrock] / 2f;
 
             if (onDig != null) onDig(digCount);
         }

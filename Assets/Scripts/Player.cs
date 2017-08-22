@@ -8,7 +8,7 @@ public class Player : MonoBehaviour
     public int id;
     public bool isTop = true;
     public bool ai = false;
-    private float gold = 60;
+    private float gold = 100;
 
     private LineRenderer aimLine;
 
