@@ -16,7 +16,6 @@ public class DrillHouse : Building
         return player == Owner && player.GetGold() >= drillCost;
     }
 
-
     public Drill LaunchDrill()
     {
         Drill drill = Instantiate(drillPrefab);
@@ -29,7 +28,6 @@ public class DrillHouse : Building
 
         return drill;
     }
-
 
     protected override void Awake()
     {

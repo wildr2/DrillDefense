@@ -11,7 +11,7 @@ public class PlayerUI : MonoBehaviour
     private void Awake()
     {
         GameManager gm = FindObjectOfType<GameManager>();
-        gm.onPlayersReady += () => { player = gm.GetLocalPlayer(); };
+        gm.DoOncePlayersReady(() => { player = gm.GetLocalPlayer(); });
     }
     private void Update()
     {

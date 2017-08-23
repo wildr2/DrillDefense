@@ -45,8 +45,7 @@ public class Player : NetworkBehaviour
         gm.RegisterPlayer(this);
         if (isLocalPlayer)
         {
-            if (gm.PlayersReady) StartUpdateLoop();
-            else gm.onPlayersReady += StartUpdateLoop;
+            gm.DoOncePlayersReady(StartUpdateLoop);
         }
     }
     private void StartUpdateLoop()
@@ -183,9 +182,19 @@ public class Player : NetworkBehaviour
         if (house.CanLaunchDrill(this))
         {
             Drill drill = house.LaunchDrill();
-            drill.onDig += OnDrillDig;
-            Gold -= DrillHouse.drillCost;
+            RpcOnLaunchDrill(drill.netId);
         }
+    }
+
+    [ClientRpc]
+    private void RpcOnBuild(NetworkInstanceId buildingNetId)
+    {
+        OnBuild(ClientScene.FindLocalObject(buildingNetId).GetComponent<Building>());
+    }
+    [ClientRpc]
+    private void RpcOnLaunchDrill(NetworkInstanceId drillNetId)
+    {
+        OnLaunchDrill(ClientScene.FindLocalObject(drillNetId).GetComponent<Drill>());
     }
 
     private bool CanBuild(Building buildingPrefab)
@@ -208,11 +217,10 @@ public class Player : NetworkBehaviour
         building.onDestroyed += OnBuildingDestroyed;
         Gold -= building.Cost;
     }
-    [ClientRpc]
-    private void RpcOnBuild(NetworkInstanceId buildingNetId)
+    private void OnLaunchDrill(Drill drill)
     {
-        OnBuild(ClientScene.FindLocalObject(buildingNetId).GetComponent<Building>());
+        Gold -= DrillHouse.drillCost;
+        drill.onDig += OnDrillDig;
     }
-
 
 }

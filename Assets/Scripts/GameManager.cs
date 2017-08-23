@@ -10,7 +10,7 @@ public class GameManager : MonoBehaviour
     public Player BotPlayer { get { return Players[1]; } }
 
     public bool PlayersReady { get; private set; }
-    public System.Action onPlayersReady;
+    private System.Action onPlayersReady;
 
 
 
@@ -37,6 +37,11 @@ public class GameManager : MonoBehaviour
         {
             OnAllPlayersRegistered();
         }
+    }
+    public void DoOncePlayersReady(System.Action action)
+    {
+        if (PlayersReady) action();
+        onPlayersReady += action;
     }
 
     private void Awake()
