@@ -25,12 +25,25 @@ public abstract class Building : NetworkBehaviour
     }
     protected virtual void OnCollisionEnter2D(Collision2D collision)
     {
+        if (!isServer) return;
+
         Drill drill = collision.collider.GetComponent<Drill>();
         if (drill != null)
         {
-            if (onDestroyed != null)
-                onDestroyed(this);
-            Destroy(gameObject);
+            if (!isClient) OnCollideDrill();
+            RpcOnCollideDrill();
         }
+    }
+
+    [ClientRpc]
+    private void RpcOnCollideDrill()
+    {
+        OnCollideDrill();
+    }
+    private void OnCollideDrill()
+    {
+        Destroy(gameObject);
+        if (onDestroyed != null)
+            onDestroyed(this);
     }
 }

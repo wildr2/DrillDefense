@@ -6,7 +6,7 @@ public class CamController : MonoBehaviour
 {
     private Vector3 targetPos;
     private float scrollSpeed = 10;
-    private float scrollSharpness = 40;
+    //private float scrollSharpness = 20;
 
     private void Awake()
     {

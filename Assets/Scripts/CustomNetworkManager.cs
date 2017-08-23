@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 class CustomNetworkManager : NetworkManager
 {
-    private int connectedPlayers = 0;
+    private short connectedPlayers = 0;
 
     public override void OnServerAddPlayer(NetworkConnection conn, short playerControllerId)
     {

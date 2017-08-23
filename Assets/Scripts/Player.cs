@@ -6,11 +6,11 @@ using UnityEngine.Networking;
 
 public class Player : NetworkBehaviour
 {
-    [SyncVar] public int id;
-    public bool ai = false;
+    [SyncVar] public short id;
+    [SyncVar] private float gold; // TODO: make short and divide / round when retrieving?
 
+    public bool ai = false;
     public bool IsTop { get; private set; }
-    public float Gold { get; private set; }
     private List<Building> buildings = new List<Building>();
     private LineRenderer aimLine;
 
@@ -24,7 +24,7 @@ public class Player : NetworkBehaviour
 
     public int GetGold()
     {
-        return Mathf.FloorToInt(Gold);
+        return Mathf.FloorToInt(gold);
     }
 
 
@@ -37,7 +37,7 @@ public class Player : NetworkBehaviour
         aimLine = GetComponent<LineRenderer>();
         
         aimLine.enabled = false;
-        Gold = 120;
+        gold = 120;
     }
     private void Start()
     {
@@ -62,8 +62,8 @@ public class Player : NetworkBehaviour
     }
     private void Update()
     {
-        // Gold
-        //Gold += Time.deltaTime * 3;
+        // gold
+        //gold += Time.deltaTime * 3;
     }
     private IEnumerator HumanUpdate()
     {
@@ -120,7 +120,7 @@ public class Player : NetworkBehaviour
     }
     private void OnDrillDig(Dictionary<RockType, int> digCount)
     {
-        Gold += digCount[RockType.Gold] / 10f;
+        gold += digCount[RockType.Gold] / 10f;
     }
 
     private IEnumerator PlaceBuilding(Building buildingPrefab)
@@ -199,7 +199,7 @@ public class Player : NetworkBehaviour
 
     private bool CanBuild(Building buildingPrefab)
     {
-        return Gold >= buildingPrefab.Cost;
+        return gold >= buildingPrefab.Cost;
     }
     private void Build(Building buildingPrefab, float xPos)
     {
@@ -215,11 +215,11 @@ public class Player : NetworkBehaviour
         building.Init(this);
         buildings.Add(building);
         building.onDestroyed += OnBuildingDestroyed;
-        Gold -= building.Cost;
+        gold -= building.Cost;
     }
     private void OnLaunchDrill(Drill drill)
     {
-        Gold -= DrillHouse.drillCost;
+        gold -= DrillHouse.drillCost;
         drill.onDig += OnDrillDig;
     }
 
