@@ -9,6 +9,16 @@ public class GameManager : MonoBehaviour
     public Player TopPlayer { get { return Players[0]; } }
     public Player BotPlayer { get { return Players[1]; } }
 
+    public bool PlayersReady { get; private set; }
+    public System.Action onPlayersReady;
+
+
+
+
+    public Player GetLocalPlayer()
+    {
+        return TopPlayer.isLocalPlayer ? TopPlayer : BotPlayer;
+    }
 
     public void RegisterPlayer(Player player)
     {
@@ -22,10 +32,21 @@ public class GameManager : MonoBehaviour
         }
 
         Tools.Log("Registered Player " + player.id + (player.ai ? " (AI)" : ""), Color.blue);
+
+        if (TopPlayer != null && BotPlayer != null)
+        {
+            OnAllPlayersRegistered();
+        }
     }
 
     private void Awake()
     {
         Players = new Player[2];
+    }
+    private void OnAllPlayersRegistered()
+    {
+        PlayersReady = true;
+        if (onPlayersReady != null)
+            onPlayersReady();
     }
 }

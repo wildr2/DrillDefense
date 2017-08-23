@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.Networking;
 
 
@@ -11,36 +10,44 @@ public class Player : NetworkBehaviour
     public bool ai = false;
 
     public bool IsTop { get; private set; }
-    private float gold = 100;
+    public float Gold { get; private set; }
     private List<Building> buildings = new List<Building>();
     private LineRenderer aimLine;
 
-    //public Text uiGold;
     public DrillHouse drillHousePrefab;
     private Ground ground;
+    private GameManager gm;
 
+
+    // PRIVATE MODIFIERS
 
     private void Awake()
     {
+        gm = FindObjectOfType<GameManager>();
         ground = FindObjectOfType<Ground>();
         aimLine = GetComponent<LineRenderer>();
-
+        
         aimLine.enabled = false;
+        Gold = 120;
     }
     private void Start()
     {
         IsTop = id == 0;
-
-        GameManager gm = FindObjectOfType<GameManager>();
         gm.RegisterPlayer(this);
-
-        // Start update routine
+        if (isLocalPlayer)
+        {
+            if (gm.PlayersReady) StartUpdateLoop();
+            else gm.onPlayersReady += StartUpdateLoop;
+        }
+    }
+    private void StartUpdateLoop()
+    {
         if (ai)
         {
             // note: should always be the server (1v1)
             StartCoroutine(AIUpdate());
         }
-        else if (isLocalPlayer)
+        else
         {
             StartCoroutine(HumanUpdate());
         }
@@ -48,8 +55,7 @@ public class Player : NetworkBehaviour
     private void Update()
     {
         // Gold
-        //gold += Time.deltaTime * 3;
-        //uiGold.text = Mathf.FloorToInt(gold).ToString();
+        //Gold += Time.deltaTime * 3;
     }
     private IEnumerator HumanUpdate()
     {
@@ -69,7 +75,7 @@ public class Player : NetworkBehaviour
                 if (col != null)
                 {
                     DrillHouse house = col.GetComponent<DrillHouse>();
-                    if (house != null && house.CanLaunchDrill(this, (int)gold))
+                    if (house != null && house.CanLaunchDrill(this, (int)Gold))
                         CmdLaunchDrill(house.netId);
                 }
             }
@@ -106,7 +112,7 @@ public class Player : NetworkBehaviour
     }
     private void OnDrillDig(Dictionary<RockType, int> digCount)
     {
-        gold += digCount[RockType.Gold] / 10f;
+        Gold += digCount[RockType.Gold] / 10f;
     }
 
     private IEnumerator PlaceBuilding(Building buildingPrefab)
@@ -165,17 +171,17 @@ public class Player : NetworkBehaviour
         DrillHouse house = NetworkServer.FindLocalObject(houseNetId).GetComponent<DrillHouse>();
         if (house == null) return;
 
-        if (house.CanLaunchDrill(this, (int)gold))
+        if (house.CanLaunchDrill(this, (int)Gold))
         {
             Drill drill = house.LaunchDrill();
             drill.onDig += OnDrillDig;
-            gold -= DrillHouse.drillCost;
+            Gold -= DrillHouse.drillCost;
         }
     }
 
     private bool CanBuild(Building buildingPrefab)
     {
-        return gold >= buildingPrefab.Cost;
+        return Gold >= buildingPrefab.Cost;
     }
     private void Build(Building buildingPrefab, float xPos)
     {
@@ -191,7 +197,7 @@ public class Player : NetworkBehaviour
         building.Init(this);
         buildings.Add(building);
         building.onDestroyed += OnBuildingDestroyed;
-        gold -= building.Cost;
+        Gold -= building.Cost;
     }
     [ClientRpc]
     private void RpcOnBuild(NetworkInstanceId buildingNetId)
