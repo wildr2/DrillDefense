@@ -2,21 +2,22 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Networking;
 
-public class Player : MonoBehaviour
+
+public class Player : NetworkBehaviour
 {
-    public int id;
-    public bool isTop = true;
+    [SyncVar] public int id;
     public bool ai = false;
-    private float gold = 100;
 
+    public bool IsTop { get; private set; }
+    private float gold = 100;
+    private List<Building> buildings = new List<Building>();
     private LineRenderer aimLine;
 
-    public Text uiGold;
+    //public Text uiGold;
     public DrillHouse drillHousePrefab;
     private Ground ground;
-
-    private List<Building> buildings = new List<Building>();
 
 
     private void Awake()
@@ -28,14 +29,27 @@ public class Player : MonoBehaviour
     }
     private void Start()
     {
-        if (ai) StartCoroutine(AIUpdate());
-        else StartCoroutine(HumanUpdate());
+        IsTop = id == 0;
+
+        GameManager gm = FindObjectOfType<GameManager>();
+        gm.RegisterPlayer(this);
+
+        // Start update routine
+        if (ai)
+        {
+            // note: should always be the server (1v1)
+            StartCoroutine(AIUpdate());
+        }
+        else if (isLocalPlayer)
+        {
+            StartCoroutine(HumanUpdate());
+        }
     }
     private void Update()
     {
         // Gold
         //gold += Time.deltaTime * 3;
-        uiGold.text = Mathf.FloorToInt(gold).ToString();
+        //uiGold.text = Mathf.FloorToInt(gold).ToString();
     }
     private IEnumerator HumanUpdate()
     {
@@ -107,8 +121,8 @@ public class Player : MonoBehaviour
     }
     private void SetOnSurface(Transform thing, float xPos)
     {
-        thing.up = ground.GetNormalAt(xPos, isTop);
-        thing.position = new Vector2(xPos, ground.GetHeightAt(xPos, isTop));
+        thing.up = ground.GetNormalAt(xPos, IsTop);
+        thing.position = new Vector2(xPos, ground.GetHeightAt(xPos, IsTop));
         thing.position -= thing.up * 0.1f;
     }
 

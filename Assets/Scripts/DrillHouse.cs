@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
 public class DrillHouse : Building
 {
@@ -23,6 +24,8 @@ public class DrillHouse : Building
 
         Physics2D.IgnoreCollision(GetComponent<Collider2D>(),
             drill.GetComponent<Collider2D>());
+
+        NetworkServer.Spawn(drill.gameObject);
 
         return drill;
     }

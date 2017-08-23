@@ -1,8 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
-public class Drill : MonoBehaviour
+public class Drill : NetworkBehaviour
 {
     private float speed = 1; // units per second
     public float fallGravity = 1;
