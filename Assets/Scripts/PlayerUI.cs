@@ -17,6 +17,6 @@ public class PlayerUI : MonoBehaviour
     {
         if (player == null) return;
 
-        goldText.text = Mathf.FloorToInt(player.Gold).ToString();
+        goldText.text = player.GetGold().ToString();
     }
 }

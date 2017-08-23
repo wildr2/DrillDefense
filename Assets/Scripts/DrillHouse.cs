@@ -11,9 +11,9 @@ public class DrillHouse : Building
     public const int drillCost = 10;
 
 
-    public bool CanLaunchDrill(Player player, int gold)
+    public bool CanLaunchDrill(Player player)
     {
-        return player == Owner && gold >= drillCost;
+        return player == Owner && player.GetGold() >= drillCost;
     }
 
 

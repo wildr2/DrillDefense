@@ -19,6 +19,15 @@ public class Player : NetworkBehaviour
     private GameManager gm;
 
 
+
+    // PRIVATE ACCESSORS
+
+    public int GetGold()
+    {
+        return Mathf.FloorToInt(Gold);
+    }
+
+
     // PRIVATE MODIFIERS
 
     private void Awake()
@@ -75,7 +84,7 @@ public class Player : NetworkBehaviour
                 if (col != null)
                 {
                     DrillHouse house = col.GetComponent<DrillHouse>();
-                    if (house != null && house.CanLaunchDrill(this, (int)Gold))
+                    if (house != null && house.CanLaunchDrill(this))
                         CmdLaunchDrill(house.netId);
                 }
             }
@@ -98,7 +107,7 @@ public class Player : NetworkBehaviour
             {
                 int i = Random.Range(0, buildings.Count);
                 DrillHouse b = (DrillHouse)buildings[i];
-                if (b.CanLaunchDrill(this, (int)Gold))
+                if (b.CanLaunchDrill(this))
                     CmdLaunchDrill(b.netId);
             }
 
@@ -171,7 +180,7 @@ public class Player : NetworkBehaviour
         DrillHouse house = NetworkServer.FindLocalObject(houseNetId).GetComponent<DrillHouse>();
         if (house == null) return;
 
-        if (house.CanLaunchDrill(this, (int)Gold))
+        if (house.CanLaunchDrill(this))
         {
             Drill drill = house.LaunchDrill();
             drill.onDig += OnDrillDig;
