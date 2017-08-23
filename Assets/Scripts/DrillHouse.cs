@@ -11,26 +11,39 @@ public class DrillHouse : Building
     public const int drillCost = 10;
 
 
-    public bool CanLaunchDrill(int gold)
+    public bool CanLaunchDrill(Player player, int gold)
     {
-        return gold >= drillCost;
+        return player == Owner && gold >= drillCost;
     }
+
+
     public Drill LaunchDrill()
     {
         Drill drill = Instantiate(drillPrefab);
         drill.transform.position = transform.position - transform.up * 0.5f;
         drill.SetDirection(-transform.up);
-
-        Physics2D.IgnoreCollision(GetComponent<Collider2D>(),
-            drill.GetComponent<Collider2D>());
-
         NetworkServer.Spawn(drill.gameObject);
+
+        if (!isClient) OnLaunchDrill(drill);
+        RpcOnLaunchDrill(drill.netId);
+
         return drill;
     }
+
 
     protected override void Awake()
     {
         base.Awake();
     }
-    
+
+    private void OnLaunchDrill(Drill drill)
+    {
+        Physics2D.IgnoreCollision(GetComponent<Collider2D>(),
+            drill.GetComponent<Collider2D>());
+    }
+    [ClientRpc]
+    private void RpcOnLaunchDrill(NetworkInstanceId drillNetId)
+    {
+        OnLaunchDrill(ClientScene.FindLocalObject(drillNetId).GetComponent<Drill>());
+    }
 }

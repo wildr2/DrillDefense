@@ -69,7 +69,7 @@ public class Player : NetworkBehaviour
                 if (col != null)
                 {
                     DrillHouse house = col.GetComponent<DrillHouse>();
-                    if (house != null && house.CanLaunchDrill((int)gold))
+                    if (house != null && house.CanLaunchDrill(this, (int)gold))
                         CmdLaunchDrill(house.netId);
                 }
             }
@@ -165,7 +165,7 @@ public class Player : NetworkBehaviour
         DrillHouse house = NetworkServer.FindLocalObject(houseNetId).GetComponent<DrillHouse>();
         if (house == null) return;
 
-        if (house.CanLaunchDrill((int)gold))
+        if (house.CanLaunchDrill(this, (int)gold))
         {
             Drill drill = house.LaunchDrill();
             drill.onDig += OnDrillDig;
@@ -183,9 +183,21 @@ public class Player : NetworkBehaviour
         SetOnSurface(b.transform, xPos);
         NetworkServer.Spawn(b.gameObject);
 
-        //buildings.Add(b);
-        //b.onDestroyed += OnBuildingDestroyed;
-
-        gold -= buildingPrefab.Cost;
+        if (!isClient) OnBuild(b);
+        RpcOnBuild(b.netId);
     }
+    private void OnBuild(Building building)
+    {
+        building.Init(this);
+        buildings.Add(building);
+        building.onDestroyed += OnBuildingDestroyed;
+        gold -= building.Cost;
+    }
+    [ClientRpc]
+    private void RpcOnBuild(NetworkInstanceId buildingNetId)
+    {
+        OnBuild(ClientScene.FindLocalObject(buildingNetId).GetComponent<Building>());
+    }
+
+
 }

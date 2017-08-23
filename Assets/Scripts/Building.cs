@@ -5,12 +5,19 @@ using UnityEngine.Networking;
 
 public abstract class Building : NetworkBehaviour
 {
+    public Player Owner { get; private set; }
+
     protected SpriteRenderer spriteR;
     public Transform templatePrefab;
     public abstract int Cost { get; }
 
     public System.Action<Building> onDestroyed;
 
+
+    public virtual void Init(Player owner)
+    {
+        Owner = owner;
+    }
 
     protected virtual void Awake()
     {
