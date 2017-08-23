@@ -14,6 +14,7 @@ public class Ground : MonoBehaviour
     public Color goldColor = Color.yellow;
     public Color hardrockColor = Color.black;
     private Color clearColor = Color.clear;
+    public Color dugTint = Color.black;
 
     // Rendering
     public SpriteRenderer spriteR, spriteRBG;
@@ -26,7 +27,7 @@ public class Ground : MonoBehaviour
     private int pixelsWide, pixelsHigh; // ground units (pixels)
     public const float resolution = 15; // pixels per world unit
     private const float grassHeight = 0.2f; // world units
-    private const float bgDarkness = 0.6f;
+    //private const float bgDarkness = 0.6f;
 
     // Data
     private RockType[][] data; // rock type for each pixel ([x][y] ground units)
@@ -311,7 +312,7 @@ public class Ground : MonoBehaviour
                             rock == RockType.Hardrock ? hardrockColor : Color.red;
 
                 colorsBG[i] = rock == RockType.None ? clearColor :
-                    Color.Lerp(colors[i], Color.black, bgDarkness);
+                    Color.Lerp(Color.Lerp(colors[i], dirtColor, 0.4f), dugTint, 0.8f);
 
                 ++i;
             }
