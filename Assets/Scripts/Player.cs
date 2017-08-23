@@ -86,23 +86,23 @@ public class Player : NetworkBehaviour
     {
         while (true)
         {
-            //float r = Random.value;
-            //if (r < 0.3f)
-            //{
-            //    if (CanBuild(drillHousePrefab))
-            //    {
-            //        Build(drillHousePrefab, Random.Range(0, ground.Width) - ground.Width / 2f);
-            //    }
-            //}
-            //else if (r < 0.4f && buildings.Count > 0)
-            //{
-            //    int i = Random.Range(0, buildings.Count);
-            //    DrillHouse b = (DrillHouse)buildings[i];
-            //    TryLaunchDrill(b);
-            //}
-            
-               
-            //yield return new WaitForSeconds(1);
+            float r = Random.value;
+            if (r < 0.3f)
+            {
+                if (CanBuild(drillHousePrefab))
+                {
+                    CmdBuild(Random.Range(0, ground.Width) - ground.Width / 2f);
+                }
+            }
+            else if (r < 0.4f && buildings.Count > 0)
+            {
+                int i = Random.Range(0, buildings.Count);
+                DrillHouse b = (DrillHouse)buildings[i];
+                if (b.CanLaunchDrill(this, (int)Gold))
+                    CmdLaunchDrill(b.netId);
+            }
+
+            yield return new WaitForSeconds(1);
         }
     }
 
