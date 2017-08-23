@@ -6,6 +6,8 @@ public enum RockType { None, Any, Dirt, Grass, Gold, Hardrock }
 
 public class Ground : MonoBehaviour
 {
+    public SeedManager seeder;
+
     // Colors
     public Color dirtColor = Color.black;
     public Color grassColor = Color.green;
@@ -200,7 +202,12 @@ public class Ground : MonoBehaviour
         Height = transform.localScale.y;
         transform.localScale = new Vector3(1, 1, 1);
 
-        // Generate
+        // Gererate after synched random seed is known
+        seeder.onSeedSet += Make;
+    }
+    private void Make(int seed)
+    {
+        Random.InitState(seed);
         MakeTerrain();
         MakeTextures();
         MakeSprites();

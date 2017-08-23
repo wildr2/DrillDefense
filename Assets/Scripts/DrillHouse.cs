@@ -15,7 +15,6 @@ public class DrillHouse : Building
     {
         return gold >= drillCost;
     }
-
     public Drill LaunchDrill()
     {
         Drill drill = Instantiate(drillPrefab);
@@ -26,7 +25,6 @@ public class DrillHouse : Building
             drill.GetComponent<Collider2D>());
 
         NetworkServer.Spawn(drill.gameObject);
-
         return drill;
     }
 
@@ -34,7 +32,5 @@ public class DrillHouse : Building
     {
         base.Awake();
     }
-    private void Update()
-    {
-    }
+    
 }
