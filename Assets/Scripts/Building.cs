@@ -42,6 +42,7 @@ public abstract class Building : NetworkBehaviour
     }
     private void OnCollideDrill()
     {
+        Tools.Log("drill vs building");
         Destroy(gameObject);
         if (onDestroyed != null)
             onDestroyed(this);

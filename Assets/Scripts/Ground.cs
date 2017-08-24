@@ -224,11 +224,11 @@ public class Ground : MonoBehaviour
         // Fill Data
         data = new RockType[pixelsWide][];
 
-        Vector2 perlinGoldStart = (Vector2)Random.onUnitSphere * Random.value * 1000f;
+        Vector2 perlinGoldStart = new Vector2(Random.value, Random.value) * 1000f;
         Vector2 perlinGold = perlinGoldStart;
         float perlinGoldThreshold = 0.6f;
 
-        Vector2 perlinHardStart = (Vector2)Random.onUnitSphere * Random.value * 1000f;
+        Vector2 perlinHardStart = new Vector2(Random.value, Random.value) * 1000f;
         Vector2 perlinHard = perlinHardStart;
         float perlinHardThreshold = 0.6f;
 

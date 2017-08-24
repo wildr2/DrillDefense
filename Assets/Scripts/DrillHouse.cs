@@ -36,6 +36,8 @@ public class DrillHouse : Building
 
     private void OnLaunchDrill(Drill drill)
     {
+        drill.Init(Owner);
+
         Physics2D.IgnoreCollision(GetComponent<Collider2D>(),
             drill.GetComponent<Collider2D>());
     }

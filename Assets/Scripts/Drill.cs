@@ -5,6 +5,8 @@ using UnityEngine.Networking;
 
 public class Drill : NetworkBehaviour
 {
+    public Player Owner { get; private set; }
+
     private float speed = 1; // units per second
     public float fallGravity = 1;
     private float fallTime = 0;
@@ -19,11 +21,17 @@ public class Drill : NetworkBehaviour
     public System.Action<Dictionary<RockType, int>> onDig;
 
 
+
+    public virtual void Init(Player owner)
+    {
+        Owner = owner;
+    }
     public void SetDirection(Vector2 dir)
     {
         fallGravity = -Vector2.Dot(dir, Vector2.up);
         transform.up = -dir;
     }
+
 
     private void Awake()
     {
