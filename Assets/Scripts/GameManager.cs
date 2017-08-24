@@ -9,10 +9,9 @@ public class GameManager : MonoBehaviour
     public Player TopPlayer { get { return Players[0]; } }
     public Player BotPlayer { get { return Players[1]; } }
 
+    public bool IsPlaying { get; private set; }
     public bool PlayersReady { get; private set; }
     private System.Action onPlayersReady;
-
-
 
 
     public Player GetLocalPlayer()
@@ -51,6 +50,8 @@ public class GameManager : MonoBehaviour
     private void OnAllPlayersRegistered()
     {
         PlayersReady = true;
+        IsPlaying = true;
+
         if (onPlayersReady != null)
             onPlayersReady();
     }

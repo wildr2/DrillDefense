@@ -9,6 +9,9 @@ public class Player : NetworkBehaviour
     [SyncVar] public short id;
     [SyncVar] private float gold; // TODO: make short and divide / round when retrieving?
 
+    private const int startGold = 100;
+    private const int goldPerSecond = 1;
+
     public bool ai = false;
     public bool IsTop { get; private set; }
     public Vector2 Up { get { return IsTop ? Vector2.up : -Vector2.up; } }
@@ -38,7 +41,7 @@ public class Player : NetworkBehaviour
         aimLine = GetComponent<LineRenderer>();
         
         aimLine.enabled = false;
-        gold = 120;
+        gold = startGold;
 
         DataManager dm = DataManager.Instance;
         if (dm.debug_powers)
@@ -50,32 +53,33 @@ public class Player : NetworkBehaviour
     {
         IsTop = id == 0;
         gm.RegisterPlayer(this);
-        if (isLocalPlayer)
-        {
-            gm.DoOncePlayersReady(StartUpdateLoop);
-        }
+        StartUpdateLoop();
     }
     private void StartUpdateLoop()
     {
-        if (ai)
+        if (isLocalPlayer)
         {
-            // note: should always be the server (1v1)
-            StartCoroutine(AIUpdate());
-        }
-        else
-        {
-            StartCoroutine(HumanUpdate());
+            if (ai)
+            {
+                StartCoroutine(AIUpdate());
+            }
+            else
+            {
+                StartCoroutine(HumanUpdate());
+            }
         }
     }
     private void Update()
     {
-        // gold
-        //gold += Time.deltaTime * 3;
+        if (!gm.IsPlaying) return;
+        gold += goldPerSecond * Time.deltaTime;
     }
     private IEnumerator HumanUpdate()
     {
         while (true)
         {
+            if (!gm.IsPlaying) yield return null;
+
             // Build
             if (Input.GetKeyDown(KeyCode.H))
             {
@@ -92,6 +96,8 @@ public class Player : NetworkBehaviour
     {
         while (true)
         {
+            if (!gm.IsPlaying) yield return null;
+
             float r = Random.value;
             if (r < 0.3f)
             {
