@@ -7,6 +7,11 @@ class CustomNetworkManager : NetworkManager
 {
     private short connectedPlayers = 0;
 
+    public override void OnStartServer()
+    {
+        connectedPlayers = 0;
+        base.OnStartServer();
+    }
     public override void OnServerAddPlayer(NetworkConnection conn, short playerControllerId)
     {
         DataManager dm = DataManager.Instance;
@@ -22,4 +27,10 @@ class CustomNetworkManager : NetworkManager
         if (connectedPlayers >= dm.NumHumans && connectedPlayers < DataManager.numPlayers)
             ClientScene.AddPlayer((short)(playerControllerId + 1));
     }
+    public override void OnServerDisconnect(NetworkConnection conn)
+    {
+        connectedPlayers -= 1;
+        base.OnServerDisconnect(conn);
+    }
+    
 }

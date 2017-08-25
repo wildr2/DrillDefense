@@ -18,6 +18,8 @@ public class Player : NetworkBehaviour
     private List<Building> buildings = new List<Building>();
     private LineRenderer aimLine;
 
+    private bool isPlacing = false;
+
     public DrillHouse drillHousePrefab;
     private Ground ground;
     private GameManager gm;
@@ -87,7 +89,10 @@ public class Player : NetworkBehaviour
             }
 
             // Click action
-            UpdateClickAction();
+            if (!isPlacing)
+            {
+                UpdateClickAction();
+            }
 
             yield return null;
         }
@@ -103,7 +108,7 @@ public class Player : NetworkBehaviour
             {
                 if (CanBuild(drillHousePrefab))
                 {
-                    CmdBuildOnSurface(Random.Range(0, ground.Width) - ground.Width / 2f);
+                    BuildOnSurface(drillHousePrefab, Random.Range(0, ground.Width) - ground.Width / 2f);
                 }
             }
             else if (r < 0.4f && buildings.Count > 0)
@@ -124,23 +129,14 @@ public class Player : NetworkBehaviour
             Vector2 mouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             Collider2D col = Physics2D.OverlapPoint(mouse);
             if (col == null) return;
-            
-            
+
             // Launch Drill
             DrillHouse house = col.GetComponent<DrillHouse>();
             if (house != null && house.CanLaunchDrill(this))
             {
-                CmdLaunchDrill(house.netId);
+                LaunchDrill(house);
                 return;
             }
-
-            //// Drill to house
-            //Drill drill = col.GetComponent<Drill>();
-            //if (drill != null && CanBuild(drillHousePrefab))
-            //{
-            //    CmdBuildAtObject(drill.netId);
-            //    return;
-            //}
         }
     }
 
@@ -153,11 +149,18 @@ public class Player : NetworkBehaviour
         gold += digCount[RockType.Gold] / 10f;
     }
 
+    private void SetAimLine(Vector2 p1, Vector2 p2)
+    {
+        aimLine.SetPosition(0, new Vector3(p1.x, p1.y, -5));
+        aimLine.SetPosition(1, new Vector3(p2.x, p2.y, -5));
+    }
+
     private IEnumerator PlaceBuilding(Building buildingPrefab)
     {
         // Create building template
         Transform template = Instantiate(buildingPrefab.templatePrefab);
         aimLine.enabled = true;
+        isPlacing = true;
 
         while (true)
         {
@@ -175,8 +178,7 @@ public class Player : NetworkBehaviour
             }
 
             // Aimline
-            aimLine.SetPosition(0, template.position);
-            aimLine.SetPosition(1, template.position + -template.up * 20);
+            SetAimLine(template.position, template.position + -template.up * 20);
 
             // Actions
             if (Input.GetMouseButtonDown(0)) // Build on left click
@@ -185,11 +187,11 @@ public class Player : NetworkBehaviour
                 {
                     if (nearbyDrill != null)
                     {
-                        CmdBuildNearDrill(nearbyDrill.netId, template.position);
+                        BuildNearDrill(drillHousePrefab, nearbyDrill, template.position);
                     }
                     else
                     {
-                        CmdBuildOnSurface(template.position.x);
+                        BuildOnSurface(drillHousePrefab, template.position.x);
                     }
                     break;
                 }
@@ -205,6 +207,7 @@ public class Player : NetworkBehaviour
         // Cleanup
         Destroy(template.gameObject);
         aimLine.enabled = false;
+        isPlacing = false;
     }
     private void SetOnSurface(Transform thing, float xPos)
     {
@@ -213,69 +216,72 @@ public class Player : NetworkBehaviour
         thing.position -= thing.up * 0.1f;
     }
 
-    [Command] private void CmdBuildOnSurface(float xPos)
+
+    private void LaunchDrill(DrillHouse house)
     {
-        if (CanBuild(drillHousePrefab))
-        {
-            BuildOnSurface(drillHousePrefab, xPos);
-        }
+        CmdLaunchDrill(house.netId);
     }
-    [Command] private void CmdBuildNearDrill(NetworkInstanceId drillNetId, Vector2 pos)
-    {
-        Drill drill = NetworkServer.FindLocalObject(drillNetId).GetComponent<Drill>();
-        if (CanBuildNearDrill(drillHousePrefab, drill))
-        {
-            BuildNearDrill(drillHousePrefab, drill, pos);
-        }
-    }
-    [Command] private void CmdLaunchDrill(NetworkInstanceId houseNetId)
+    [Command]
+    private void CmdLaunchDrill(NetworkInstanceId houseNetId)
     {
         DrillHouse house = NetworkServer.FindLocalObject(houseNetId).GetComponent<DrillHouse>();
         if (house == null) return;
 
-        if (house.CanLaunchDrill(this))
-        {
-            Drill drill = house.LaunchDrill();
-            RpcOnLaunchDrill(drill.netId);
-        }
+        Drill drill = house.LaunchDrill();
+        RpcOnLaunchDrill(drill.netId);
     }
-
-    [ClientRpc] private void RpcOnBuild(NetworkInstanceId buildingNetId)
+    private void OnLaunchDrill(Drill drill)
     {
-        OnBuild(ClientScene.FindLocalObject(buildingNetId).GetComponent<Building>());
+        gold -= DrillHouse.drillCost;
+        drill.onDig += OnDrillDig;
     }
-    [ClientRpc] private void RpcOnLaunchDrill(NetworkInstanceId drillNetId)
+    [ClientRpc]
+    private void RpcOnLaunchDrill(NetworkInstanceId drillNetId)
     {
         OnLaunchDrill(ClientScene.FindLocalObject(drillNetId).GetComponent<Drill>());
+    }
+
+
+    private bool CanBuildNearDrill(Building buildingPrefab, Drill drill)
+    {
+        return drill.Owner == this && CanBuild(buildingPrefab);
+    }
+    private void BuildNearDrill(Building buildingPrefab, Drill drill, Vector2 pos)
+    {
+        CmdBuildNearDrill(pos, drill.transform.position);
+    }
+    [Command]
+    private void CmdBuildNearDrill(Vector2 pos, Vector2 drillPos)
+    {
+        Building b = Instantiate(drillHousePrefab);
+        b.transform.position = pos;
+        b.transform.up = pos - drillPos;
+        NetworkServer.Spawn(b.gameObject);
+
+        RpcOnBuild(b.netId);
     }
 
     private bool CanBuild(Building buildingPrefab)
     {
         return gold >= buildingPrefab.Cost;
     }
-    private bool CanBuildNearDrill(Building buildingPrefab, Drill drill)
-    {
-        return drill.Owner == this && CanBuild(buildingPrefab);
-    }
     private void BuildOnSurface(Building buildingPrefab, float xPos)
     {
-        Building b = Instantiate(buildingPrefab);
+        // Immediate feedback
+
+
+        // Server command
+        CmdBuildOnSurface(xPos);
+    }
+    [Command]
+    private void CmdBuildOnSurface(float xPos)
+    {
+        Building b = Instantiate(drillHousePrefab);
         SetOnSurface(b.transform, xPos);
         NetworkServer.Spawn(b.gameObject);
-
-        if (!isClient) OnBuild(b);
         RpcOnBuild(b.netId);
     }
-    private void BuildNearDrill(Building buildingPrefab, Drill drill, Vector2 pos)
-    {
-        Building b = Instantiate(buildingPrefab);
-        b.transform.position = pos;
-        b.transform.up = pos - (Vector2)drill.transform.position;
-        NetworkServer.Spawn(b.gameObject);
 
-        if (!isClient) OnBuild(b);
-        RpcOnBuild(b.netId);
-    }
     private void OnBuild(Building building)
     {
         building.Init(this);
@@ -283,11 +289,12 @@ public class Player : NetworkBehaviour
         building.onDestroyed += OnBuildingDestroyed;
         gold -= building.Cost;
     }
-    private void OnLaunchDrill(Drill drill)
+    [ClientRpc]
+    private void RpcOnBuild(NetworkInstanceId buildingNetId)
     {
-        gold -= DrillHouse.drillCost;
-        drill.onDig += OnDrillDig;
+        OnBuild(ClientScene.FindLocalObject(buildingNetId).GetComponent<Building>());
     }
+
 
 
     // PRIVATE HELPERS

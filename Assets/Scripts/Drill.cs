@@ -7,13 +7,13 @@ public class Drill : NetworkBehaviour
 {
     public Player Owner { get; private set; }
 
-    private float speed = 1; // units per second
-    public float fallGravity = 1;
-    private float fallTime = 0;
-    private const float maxFallTime = 5;
     private float health = 60;
+    private float speed = 1; // units per second
+    //public float fallGravity = 1;
+    //private float fallTime = 0;
+    //private const float maxFallTime = 5;
 
-    private Rigidbody2D rb;
+    //private Rigidbody2D rb;
     public SpriteRenderer colliderSprite;
 
     private Ground ground;
@@ -28,7 +28,7 @@ public class Drill : NetworkBehaviour
     }
     public void SetDirection(Vector2 dir)
     {
-        fallGravity = -Vector2.Dot(dir, Vector2.up);
+        //fallGravity = -Vector2.Dot(dir, Vector2.up);
         transform.up = -dir;
     }
 
@@ -36,7 +36,7 @@ public class Drill : NetworkBehaviour
     private void Awake()
     {
         ground = FindObjectOfType<Ground>();
-        rb = GetComponent<Rigidbody2D>();
+        //rb = GetComponent<Rigidbody2D>();
     }
     private void Update()
     {
@@ -46,33 +46,15 @@ public class Drill : NetworkBehaviour
 
         if (dug)
         {
-            if (rb.gravityScale != 0)
-            {
-                // Stop falling
-                rb.gravityScale = 0;
-                fallTime = 0;
-            }
-
-            // Move Forwards
-            Vector2 heading = -transform.up;
-            rb.velocity = heading * speed;
-
             // Decrease Health
             health -= digCount[RockType.Gold] / 10f;
             health -= digCount[RockType.Hardrock] / 2f;
 
             if (onDig != null) onDig(digCount);
         }
-        else
-        {
-            // Fall
-            rb.gravityScale = fallGravity * 0.25f;
-            fallTime += Time.deltaTime;
-            if (fallTime > maxFallTime)
-            {
-                Destroy(gameObject);
-            }
-        }
+
+        // Move
+        transform.position -= transform.up * speed * Time.deltaTime;
 
         // Death
         if (health <= 0)
