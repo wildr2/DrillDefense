@@ -81,6 +81,6 @@ public class Drill : NetworkBehaviour
 
     public bool IsOutOfBounds()
     {
-        return transform.position.y > ground.GetSkyY(Owner.Up);
+        return Mathf.Abs(transform.position.y) > ground.Height * 1.5f;
     }
 }

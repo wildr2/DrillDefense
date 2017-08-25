@@ -39,7 +39,6 @@ public class GameManager : MonoBehaviour
     }
     public void DoOncePlayersReady(System.Action action)
     {
-        IsPlaying = true;
         if (PlayersReady) action();
         onPlayersReady += action;
     }
