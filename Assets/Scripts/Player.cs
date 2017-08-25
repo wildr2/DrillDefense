@@ -85,15 +85,15 @@ public class Player : NetworkBehaviour
         {
             if (!gm.IsPlaying) yield return null;
 
-            // Build
-            if (Input.GetKeyDown(KeyCode.H))
-            {
-                StartCoroutine(PlaceBuilding(drillHousePrefab));
-            }
-
-            // Click action
             if (!isPlacing)
             {
+                // Build
+                if (Input.GetKeyDown(KeyCode.H))
+                {
+                    StartCoroutine(PlaceBuilding(drillHousePrefab));
+                }
+
+                // Click action
                 UpdateClickAction();
             }
 
