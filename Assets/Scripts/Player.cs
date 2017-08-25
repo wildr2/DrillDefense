@@ -35,6 +35,10 @@ public class Player : NetworkBehaviour
     {
         return Mathf.FloorToInt(gold);
     }
+    public bool IsLocalHuman()
+    {
+        return isLocalPlayer && !ai;
+    }
 
 
     // PRIVATE MODIFIERS

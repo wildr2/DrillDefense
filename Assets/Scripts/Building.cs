@@ -11,12 +11,16 @@ public abstract class Building : NetworkBehaviour
     public Transform templatePrefab;
     public abstract int Cost { get; }
 
+    public AudioSource buildSound;
+
     public System.Action<Building> onDestroyed;
 
 
     public virtual void Init(Player owner)
     {
         Owner = owner;
+        if (owner.IsLocalHuman())
+            buildSound.Play(3000);
     }
 
     protected virtual void Awake()
