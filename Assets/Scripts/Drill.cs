@@ -9,11 +9,6 @@ public class Drill : NetworkBehaviour
 
     private float health = 60;
     private float speed = 1; // units per second
-    //public float fallGravity = 1;
-    //private float fallTime = 0;
-    //private const float maxFallTime = 5;
-
-    //private Rigidbody2D rb;
     public SpriteRenderer colliderSprite;
 
     private Ground ground;
@@ -57,7 +52,7 @@ public class Drill : NetworkBehaviour
         transform.position -= transform.up * speed * Time.deltaTime;
 
         // Death
-        if (health <= 0)
+        if (health <= 0 || IsOutOfBounds())
         {
             Destroy(gameObject);
         }
@@ -82,5 +77,10 @@ public class Drill : NetworkBehaviour
     private void OnCollideDrill()
     {
         Destroy(gameObject);
+    }
+
+    public bool IsOutOfBounds()
+    {
+        return transform.position.y > ground.GetSkyY(Owner.Up);
     }
 }

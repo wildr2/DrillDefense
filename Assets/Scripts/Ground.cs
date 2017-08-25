@@ -126,7 +126,10 @@ public class Ground : MonoBehaviour
 
         return false;
     }
-
+    public float GetSkyY(Vector2 up)
+    {
+        return transform.position.y + Height * 2f * up.y; 
+    }
 
     // PUBLIC MODIFIERS
 
