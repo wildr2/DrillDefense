@@ -6,6 +6,10 @@ using UnityEngine.Networking;
 
 public class Player : NetworkBehaviour
 {
+    public DrillHouse drillHousePrefab;
+    private Ground ground;
+    private GameManager gm;
+
     [SyncVar] public short id;
     [SyncVar] private float gold; // TODO: make short and divide / round when retrieving?
 
@@ -20,9 +24,8 @@ public class Player : NetworkBehaviour
 
     private bool isPlacing = false;
 
-    public DrillHouse drillHousePrefab;
-    private Ground ground;
-    private GameManager gm;
+    public System.Action onInputBuild;
+    public System.Action onInputLaunchDrill;
 
 
 
@@ -219,6 +222,8 @@ public class Player : NetworkBehaviour
 
     private void LaunchDrill(DrillHouse house)
     {
+        if (onInputLaunchDrill != null)
+            onInputLaunchDrill();
         CmdLaunchDrill(house.netId);
     }
     [Command]
@@ -248,6 +253,8 @@ public class Player : NetworkBehaviour
     }
     private void BuildNearDrill(Building buildingPrefab, Drill drill, Vector2 pos)
     {
+        if (onInputBuild != null)
+            onInputBuild();
         CmdBuildNearDrill(pos, drill.transform.position);
     }
     [Command]
@@ -267,10 +274,8 @@ public class Player : NetworkBehaviour
     }
     private void BuildOnSurface(Building buildingPrefab, float xPos)
     {
-        // Immediate feedback
-
-
-        // Server command
+        if (onInputBuild != null)
+            onInputBuild();
         CmdBuildOnSurface(xPos);
     }
     [Command]

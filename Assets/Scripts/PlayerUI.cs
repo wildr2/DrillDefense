@@ -7,11 +7,19 @@ public class PlayerUI : MonoBehaviour
 {
     private Player player;
     public Text goldText;
+    public AudioSource buildSound;
+    public AudioSource launchDrillSound;
 
     private void Awake()
     {
         GameManager gm = FindObjectOfType<GameManager>();
-        gm.DoOncePlayersReady(() => { player = gm.GetLocalPlayer(); });
+        gm.DoOncePlayersReady(() => { SetPlayer(gm.GetLocalPlayer()); });
+    }
+    private void SetPlayer(Player player)
+    {
+        this.player = player;
+        player.onInputBuild += () => buildSound.Play();
+        player.onInputLaunchDrill += () => launchDrillSound.Play();
     }
     private void Update()
     {
