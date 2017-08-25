@@ -39,6 +39,7 @@ public class GameManager : MonoBehaviour
     }
     public void DoOncePlayersReady(System.Action action)
     {
+        IsPlaying = true;
         if (PlayersReady) action();
         onPlayersReady += action;
     }
@@ -46,6 +47,7 @@ public class GameManager : MonoBehaviour
     private void Awake()
     {
         Players = new Player[2];
+        IsPlaying = false;
     }
     private void OnAllPlayersRegistered()
     {
