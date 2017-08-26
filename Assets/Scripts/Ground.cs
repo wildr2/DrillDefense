@@ -263,8 +263,7 @@ public class Ground : MonoBehaviour
                     data[x][y] = RockType.Hardrock; // hardrock
                     densityMap[x][y] = (Mathf.PerlinNoise(perlinHard.x, perlinHard.y) - perlinHardThreshold)
                         / perlinHardThreshold;
-                }
-                    
+                }   
                 else if (Mathf.PerlinNoise(perlinGold.x, perlinGold.y) > perlinGoldThreshold)
                 {
                     data[x][y] = RockType.Gold; // gold
