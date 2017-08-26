@@ -16,6 +16,7 @@ public class Player : NetworkBehaviour
     private const int startGold = 100;
     private const int goldPerSecond = 1;
 
+    public Color Color { get; private set; }
     public bool ai = false;
     public bool IsTop { get; private set; }
     public Vector2 Up { get { return IsTop ? Vector2.up : -Vector2.up; } }
@@ -50,17 +51,20 @@ public class Player : NetworkBehaviour
         aimLine = GetComponent<LineRenderer>();
         
         aimLine.enabled = false;
-        gold = startGold;
-
+    }
+    private void Start()
+    {
         DataManager dm = DataManager.Instance;
+
+        IsTop = id == 0;
+        Color = dm.playerColors[id];
+
+        gold = startGold;
         if (dm.debug_powers)
         {
             gold = 10000;
         }
-    }
-    private void Start()
-    {
-        IsTop = id == 0;
+
         gm.RegisterPlayer(this);
         StartUpdateLoop();
     }

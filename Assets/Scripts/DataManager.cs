@@ -35,6 +35,9 @@ public class DataManager : MonoBehaviour
     public int numAI = 0;
     public int NumHumans { get { return numPlayers - numAI; } }
 
+    public Color[] playerColors;
+
+
     // PUBLIC ACCESSORS
 
 

@@ -10,6 +10,8 @@ public class DrillHouse : Building
     public override int Cost { get { return 50; } }
     public const int drillCost = 10;
 
+    public SpriteRenderer roofSpriteR;
+
 
     public bool CanLaunchDrill(Player player)
     {
@@ -32,6 +34,11 @@ public class DrillHouse : Building
     protected override void Awake()
     {
         base.Awake();
+    }
+    public override void Init(Player owner)
+    {
+        base.Init(owner);
+        roofSpriteR.color = owner.Color;
     }
 
     private void OnLaunchDrill(Drill drill)
