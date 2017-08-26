@@ -290,13 +290,19 @@ public class Ground : MonoBehaviour
         topHeightMap = new float[pixelsWide];
         botHeightMap = new float[pixelsWide];
 
+        Vector2 perlinTop = new Vector2(Random.value, Random.value) * 1000f;
+        Vector2 perlinBot = new Vector2(Random.value, Random.value) * 1000f;
+
         for (int i = 0; i < pixelsWide; ++i)
         {
             float t = (float)i / pixelsWide;
-            float offset = (Mathf.Sin(t * Mathf.PI * 8f) + 1) * 0.3f;
+            float offsetTop = Mathf.PerlinNoise(perlinTop.x, perlinTop.y) * 3f; //(Mathf.Sin(t * Mathf.PI * 8f) + 1) * 0.3f;
+            float offsetBot = Mathf.PerlinNoise(perlinBot.x, perlinBot.y) * 3f; //(Mathf.Sin(t * Mathf.PI * 8f) + 1) * 0.3f;
+            perlinTop.x += 0.013f;
+            perlinBot.x += 0.013f;
 
-            topHeightMap[i] = (Height - offset) * resolution;
-            botHeightMap[i] = offset * resolution;
+            topHeightMap[i] = (Height - offsetTop) * resolution;
+            botHeightMap[i] = offsetBot * resolution;
         }
     }
     private void MakeTextures()
