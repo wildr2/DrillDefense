@@ -27,7 +27,6 @@ public class Ground : MonoBehaviour
     private int pixelsWide, pixelsHigh; // ground units (pixels)
     public const float resolution = 15; // pixels per world unit
     private const float grassHeight = 0.2f; // world units
-    //private const float bgDarkness = 0.6f;
 
     // Data
     private RockType[][] data; // rock type for each pixel ([x][y] ground units)
@@ -35,6 +34,7 @@ public class Ground : MonoBehaviour
     /// ideal (fractional) number of pixels (of tex) high (from bottom of image) for each pixel along horizontal
     /// </summary>
     private float[] topHeightMap, botHeightMap;
+    private float[][] densityMap;
     
 
     // PUBLIC ACCESSORS
@@ -223,6 +223,7 @@ public class Ground : MonoBehaviour
 
         // Fill Data
         data = new RockType[pixelsWide][];
+        densityMap = new float[pixelsWide][];
 
         Vector2 perlinGoldStart = new Vector2(Random.value, Random.value) * 1000f;
         Vector2 perlinGold = perlinGoldStart;
@@ -235,6 +236,7 @@ public class Ground : MonoBehaviour
         for (int x = 0; x < pixelsWide; ++x)
         {
             data[x] = new RockType[pixelsHigh];
+            densityMap[x] = new float[pixelsHigh];
 
             int botGrassEnd = (int)botHeightMap[x] + grassPixels;
             int topGrassStart = (int)topHeightMap[x] - grassPixels;
@@ -257,11 +259,22 @@ public class Ground : MonoBehaviour
             for (int y = botGrassEnd; y < topGrassStart; ++y)
             {
                 if (Mathf.PerlinNoise(perlinHard.x, perlinHard.y) > perlinHardThreshold)
+                {
                     data[x][y] = RockType.Hardrock; // hardrock
+                    densityMap[x][y] = (Mathf.PerlinNoise(perlinHard.x, perlinHard.y) - perlinHardThreshold)
+                        / perlinHardThreshold;
+                }
+                    
                 else if (Mathf.PerlinNoise(perlinGold.x, perlinGold.y) > perlinGoldThreshold)
+                {
                     data[x][y] = RockType.Gold; // gold
+                    densityMap[x][y] = (Mathf.PerlinNoise(perlinGold.x, perlinGold.y) - perlinGoldThreshold)
+                        / perlinGoldThreshold;
+                }
                 else
+                {
                     data[x][y] = RockType.Dirt; // dirt
+                }    
 
                 perlinGold.y += 0.03f;
                 perlinHard.y += 0.02f;
@@ -307,9 +320,10 @@ public class Ground : MonoBehaviour
                 RockType rock = data[x][y];
                 colors[i] = rock == RockType.None ? clearColor :
                             rock == RockType.Dirt ? dirtColor :
-                            rock == RockType.Gold ? goldColor :
+                            rock == RockType.Gold ? Color.Lerp(dirtColor, goldColor, 0.5f + (int)(densityMap[x][y] * 5) / 5f) :
                             rock == RockType.Grass ? grassColor :
-                            rock == RockType.Hardrock ? hardrockColor : Color.red;
+                            rock == RockType.Hardrock ? Color.Lerp(dirtColor, hardrockColor, 0.5f + (int)(densityMap[x][y] * 5) / 5f) 
+                            : Color.red;
 
                 colorsBG[i] = rock == RockType.None ? clearColor :
                     Color.Lerp(Color.Lerp(colors[i], dirtColor, 0.4f), dugTint, 0.8f);
