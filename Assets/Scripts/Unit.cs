@@ -11,16 +11,25 @@ public abstract class Unit : NetworkBehaviour
 
     public System.Action<Unit> onDestroyed;
 
-
+    
     public virtual void Init(Player owner)
     {
         Owner = owner;
+        if (owner.IsLocalHuman())
+        {
+            SetVisible(true);
+        }
         FindObjectOfType<Ground>().RegisterVisionUnit(this);
     }
-
-    protected virtual void SetVisible(bool visible = true)
+    public virtual void SetVisible(bool visible = true)
     {
-        graphics.gameObject.SetActive(visible);
+        if (graphics.gameObject.activeInHierarchy != visible)
+            graphics.gameObject.SetActive(visible);
+    }
+
+    protected virtual void Awake()
+    {
+        SetVisible(false);
     }
     protected virtual void OnDestroy()
     {

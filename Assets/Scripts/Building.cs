@@ -17,9 +17,6 @@ public abstract class Building : Unit
             buildSound.PlayDelayed(0.05f);
     }
 
-    protected virtual void Awake()
-    {
-    }
     protected virtual void OnCollisionEnter2D(Collision2D collision)
     {
         if (!isServer) return;

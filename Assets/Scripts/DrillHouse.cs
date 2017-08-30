@@ -37,10 +37,6 @@ public class DrillHouse : Building
         return drill;
     }
 
-    protected override void Awake()
-    {
-        base.Awake();
-    }
 
     private void OnLaunchDrill(Drill drill)
     {

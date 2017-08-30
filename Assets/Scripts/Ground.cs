@@ -24,6 +24,7 @@ public class Ground : MonoBehaviour
     public float Width { get; private set; } // world units
     public float Height { get; private set; } // world units
     private int pixelsWide, pixelsHigh; // ground units (pixels)
+    private int grassPixels;
     public const float resolution = 15; // pixels per world unit
     private const float grassHeight = 0.2f; // world units
 
@@ -226,7 +227,7 @@ public class Ground : MonoBehaviour
     {
         pixelsWide = (int)(resolution * Width);
         pixelsHigh = (int)(resolution * Height);
-        int grassPixels = (int)(grassHeight * resolution);
+        grassPixels = (int)(grassHeight * resolution);
 
         CreateHeightMaps();
 
@@ -317,9 +318,9 @@ public class Ground : MonoBehaviour
     {
         tex = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
         tex.filterMode = FilterMode.Point;
-        texBG = new Texture2D(tex.width, tex.height);
+        texBG = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
         texBG.filterMode = FilterMode.Point;
-        texFog = new Texture2D(tex.width, tex.height);
+        texFog = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
         texFog.filterMode = FilterMode.Point;
 
         // FIll texture from data
@@ -371,12 +372,28 @@ public class Ground : MonoBehaviour
             Color[] fogColors = texFog.GetPixels();
             for (int i = 0; i < fogColors.Length; ++i)
             {
-                fogColors[i] = Color.white;
+                Vector2 pos = LinIndexToGroundPos(i);
+                if (pos.y > botHeightMap[(int)pos.x]-1 
+                    && pos.y < topHeightMap[(int)pos.x] - grassPixels-1)
+                {
+                    fogColors[i] = Color.white;
+                }
+                else
+                {
+                    fogColors[i] = Color.clear;
+                }
             }
             foreach (Unit unit in visionUnits)
             {
                 if (unit.Owner.id == 0)
+                {
                     AddVisionCircle(unit.transform.position, unit.VisionRadius, fogColors);
+                }
+                else
+                {
+                    Vector2 pos = WorldToGroundPos(unit.transform.position);
+                    unit.SetVisible(texFog.GetPixel((int)pos.x, (int)pos.y).a == 0);
+                }
             }
             texFog.SetPixels(fogColors);
             texFog.Apply();
@@ -451,6 +468,11 @@ public class Ground : MonoBehaviour
     private int GroundPosToLinIndex(int x, int y)
     {
         return y * pixelsWide + x;
+    }
+    private Vector2 LinIndexToGroundPos(int linIndex)
+    {
+        return new Vector2(linIndex % pixelsWide,
+            Mathf.FloorToInt((float)linIndex / pixelsWide));
     }
     private Vector2 WorldToGroundPos(Vector2 worldPos)
     {

@@ -26,8 +26,9 @@ public class Drill : Unit
     }
 
 
-    private void Awake()
+    protected override void Awake()
     {
+        base.Awake();
         ground = FindObjectOfType<Ground>();
         //rb = GetComponent<Rigidbody2D>();
     }
