@@ -15,7 +15,6 @@ public class Ground : MonoBehaviour
     public Color goldColor = Color.yellow;
     public Color hardrockColor = Color.black;
     private Color clearColor = Color.clear;
-    public Color dugTint = Color.black;
 
     // Rendering
     public SpriteRenderer spriteR, spriteRBG, spriteRFog;
@@ -38,8 +37,6 @@ public class Ground : MonoBehaviour
 
     // Vision
     private List<Unit> visionUnits = new List<Unit>();
-    //private BitArray visionMap;
-    private bool[][] visionMap;
 
 
     // PUBLIC ACCESSORS
@@ -192,7 +189,6 @@ public class Ground : MonoBehaviour
             pos += dx;
         }
 
-        tex.Apply();
         return dugAny;
     }
     public void DrillLine(Vector2 p1, Vector2 p2, float Width)
@@ -201,7 +197,6 @@ public class Ground : MonoBehaviour
 
         DrawLineWeighted(tex, WorldToGroundPos(p1), WorldToGroundPos(p2),
             weight, clearColor);
-        tex.Apply();
     }
 
 
@@ -221,7 +216,6 @@ public class Ground : MonoBehaviour
     {
         Random.InitState(seed);
         MakeTerrain();
-        MakeVisionMap();
         MakeTextures();
         MakeSprites();
         initialized = true;
@@ -347,7 +341,7 @@ public class Ground : MonoBehaviour
                             : Color.red;
 
                 colorsBG[i] = rock == RockType.None ? clearColor :
-                    Color.Lerp(Color.Lerp(colors[i], dirtColor, 0.4f), dugTint, 0.8f);
+                    Color.Lerp(colors[i], dirtColor, 0.8f);
 
                 ++i;
             }
@@ -369,29 +363,11 @@ public class Ground : MonoBehaviour
         // Fog
         spriteRFog.sprite = Sprite.Create(texFog, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
     }
-    private void MakeVisionMap()
-    {
-        //visionMap = new BitArray(pixelsWide * pixelsHigh);
-        //visionMap = new bool[pixelsWide][];
-        //for (int x = 0; x < pixelsWide; ++x)
-        //{
-        //    visionMap[x] = new bool[pixelsHigh];
-        //}
-        //AddVisionCircle(Vector2.zero, 1);
-    }
 
     private IEnumerator UpdateVision()
     {
         while (true)
         {
-            //for (int x = 0; x < pixelsWide; ++x)
-            //{
-            //    for (int y = 0; y < pixelsHigh; ++y)
-            //    {
-            //        visionMap[x][y] = false;
-            //    }
-            //}
-
             Color[] fogColors = texFog.GetPixels();
             for (int i = 0; i < fogColors.Length; ++i)
             {
@@ -399,14 +375,20 @@ public class Ground : MonoBehaviour
             }
             foreach (Unit unit in visionUnits)
             {
-                AddVisionCircle(unit.transform.position, unit.VisionRadius, fogColors);
+                if (unit.Owner.id == 0)
+                    AddVisionCircle(unit.transform.position, unit.VisionRadius, fogColors);
             }
             texFog.SetPixels(fogColors);
             texFog.Apply();
 
-            yield return new WaitForSeconds(0.01f);
+            yield return new WaitForSeconds(0.1f);
             //yield return null;
         }
+    }
+    private void LateUpdate()
+    {
+        if (!initialized) return;
+        tex.Apply();
     }
 
     private void DigAt(Vector2 groundPos)
@@ -416,28 +398,40 @@ public class Ground : MonoBehaviour
     private void DigAt(int x, int y)
     {
         data[x][y] = RockType.None;
-        tex.SetPixel(x, y, clearColor);
     }
 
     private void AddVisionCircle(Vector2 worldPos, float radius, Color[] colors)
     {
-        Vector2 origin = WorldToGroundPos(worldPos);
-        int originX = (int)origin.x;
-        int originY = (int)origin.y;
+        IVector2 origin = new IVector2(WorldToGroundPos(worldPos));
         int r = (int)(radius * resolution);
 
-        for (int y = -r; y <= r; y++)
+        int x0 = Mathf.Max(0, origin.x - r);
+        if (x0 >= pixelsWide) return;
+        int x1 = Mathf.Min(pixelsWide-1, origin.x + r);
+        if (x1 < 0) return;
+
+        int y0 = Mathf.Max(0, origin.y - r);
+        if (y0 >= pixelsHigh) return;
+        int y1 = Mathf.Min(pixelsHigh-1, origin.y + r);
+        if (y1 < 0) return;
+
+        for (int y = y0; y <= y1; ++y)
         {
-            for (int x = -r; x <= r; x++)
+            for (int x = x0; x <= x1; ++x)
             {
-                float angle = Mathf.Atan2(y, x);
-                if (x * x + y * y <= r * r * (0.8f + 0.2f * Mathf.PerlinNoise(1000, Time.time * 0.5f + y*x * 0.002f)))
+                int relX = x - origin.x;
+                int relY = y - origin.y;
+                if (relX * relX + relY * relY <= r * r * (0.8f + 0.2f * Mathf.PerlinNoise(relX * 0.06f, Time.time * 0.7f + relY * 0.06f)))
                 {
-                    int i = GroundPosToLinIndex(originX + x, originY + y);
-                    if (i < 0 || i >= colors.Length) continue;
-                    //visionMap.Set(i, true);
-                    //visionMap[originX + x][originY + y] = true;
+                    // Has vision
+                    int i = GroundPosToLinIndex(x, y);
                     colors[i] = Color.clear;
+
+                    if (data[x][y] == RockType.None && tex.GetPixel(x, y).a > 0)
+                    {
+                        // Fog was hiding dug terrain that is now visible
+                        tex.SetPixel(x, y, clearColor);
+                    }
                 }
             }
         }
@@ -446,13 +440,17 @@ public class Ground : MonoBehaviour
 
     // PRIVATE ACCESSORS
     
+    private bool VisionAt(int x, int y)
+    {
+        return texFog.GetPixel(x, y).a == 0;
+    }
     private int GroundPosToLinIndex(Vector2 groundPos)
     {
         return (int)(groundPos.y * pixelsWide + groundPos.x);
     }
     private int GroundPosToLinIndex(int x, int y)
     {
-        return (int)(y * pixelsWide + x);
+        return y * pixelsWide + x;
     }
     private Vector2 WorldToGroundPos(Vector2 worldPos)
     {
@@ -475,7 +473,10 @@ public class Ground : MonoBehaviour
         }
         return data[groundX][groundY];
     }
-
+    private bool InBounds(int groundX, int groundY)
+    {
+        return groundX >= 0 && groundX < data.Length && groundY >= 0 && groundY < data[0].Length;
+    }
     private bool BoundsOverlap(Bounds otherBounds)
     {
         return spriteR.bounds.Intersects(otherBounds);
