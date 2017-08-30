@@ -19,7 +19,7 @@ public abstract class Unit : NetworkBehaviour
         {
             SetVisible(true);
         }
-        FindObjectOfType<Ground>().RegisterVisionUnit(this);
+        FindObjectOfType<Ground>().RegisterUnitWithVisionSys(this);
     }
     public virtual void SetVisible(bool visible = true)
     {

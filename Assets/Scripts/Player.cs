@@ -19,6 +19,8 @@ public class Player : NetworkBehaviour
     public Color Color { get; private set; }
     public bool ai = false;
     public bool IsTop { get; private set; }
+    public bool ClientPOV { get; set; }
+
     public Vector2 Up { get { return IsTop ? Vector2.up : -Vector2.up; } }
     private List<Building> buildings = new List<Building>();
     private LineRenderer aimLine;
@@ -112,23 +114,23 @@ public class Player : NetworkBehaviour
     {
         while (true)
         {
-            if (!gm.IsPlaying) yield return null;
+            //if (!gm.IsPlaying) yield return null;
 
-            float r = Random.value;
-            if (r < 0.3f)
-            {
-                if (CanBuild(drillHousePrefab))
-                {
-                    BuildOnSurface(drillHousePrefab, Random.Range(0, ground.Width) - ground.Width / 2f);
-                }
-            }
-            else if (r < 0.4f && buildings.Count > 0)
-            {
-                int i = Random.Range(0, buildings.Count);
-                DrillHouse b = (DrillHouse)buildings[i];
-                if (b.CanLaunchDrill(this))
-                    CmdLaunchDrill(b.netId);
-            }
+            //float r = Random.value;
+            //if (r < 0.3f)
+            //{
+            //    if (CanBuild(drillHousePrefab))
+            //    {
+            //        BuildOnSurface(drillHousePrefab, Random.Range(0, ground.Width) - ground.Width / 2f);
+            //    }
+            //}
+            //else if (r < 0.4f && buildings.Count > 0)
+            //{
+            //    int i = Random.Range(0, buildings.Count);
+            //    DrillHouse b = (DrillHouse)buildings[i];
+            //    if (b.CanLaunchDrill(this))
+            //        CmdLaunchDrill(b.netId);
+            //}
 
             yield return new WaitForSeconds(1);
         }

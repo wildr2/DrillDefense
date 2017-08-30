@@ -8,16 +8,12 @@ public class GameManager : MonoBehaviour
     public Player[] Players { get; private set; }
     public Player TopPlayer { get { return Players[0]; } }
     public Player BotPlayer { get { return Players[1]; } }
+    public Player LocalHuman { get; private set; }
 
     public bool IsPlaying { get; private set; }
     public bool PlayersReady { get; private set; }
     private System.Action onPlayersReady;
 
-
-    public Player GetLocalPlayer()
-    {
-        return TopPlayer.isLocalPlayer ? TopPlayer : BotPlayer;
-    }
 
     public void RegisterPlayer(Player player)
     {
@@ -50,9 +46,25 @@ public class GameManager : MonoBehaviour
     }
     private void OnAllPlayersRegistered()
     {
+        // Setup client perspective (player vision)
+        if (TopPlayer.ai && BotPlayer.ai)
+        {
+            TopPlayer.ClientPOV = true;
+            BotPlayer.ClientPOV = true;
+        }
+        else
+        {
+            LocalHuman = TopPlayer.IsLocalHuman() ? TopPlayer
+            : BotPlayer.IsLocalHuman() ? BotPlayer : null;
+
+            if (LocalHuman != null) LocalHuman.ClientPOV = true;
+        }
+
+        // Set Ready
         PlayersReady = true;
         IsPlaying = true;
 
+        // Event
         if (onPlayersReady != null)
             onPlayersReady();
     }

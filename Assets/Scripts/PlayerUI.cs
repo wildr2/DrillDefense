@@ -22,7 +22,7 @@ public class PlayerUI : MonoBehaviour
     {
         connectingScreen.gameObject.SetActive(false);
 
-        this.player = gm.GetLocalPlayer();
+        player = gm.LocalHuman;
         player.onInputBuild += () => buildSound.Play();
         player.onInputLaunchDrill += () => launchDrillSound.Play();
     }
