@@ -6,18 +6,24 @@ using UnityEngine.Networking;
 
 public class DrillHouse : Building
 {
-    public Drill drillPrefab;
     public override int Cost { get { return 50; } }
-    public const int drillCost = 10;
+    public override float VisionRadius { get { return 3; } }
+    public const int DrillCost = 10;
 
+    public Drill drillPrefab;
     public SpriteRenderer roofSpriteR;
 
 
     public bool CanLaunchDrill(Player player)
     {
-        return player == Owner && player.GetGold() >= drillCost;
+        return player == Owner && player.GetGold() >= DrillCost;
     }
 
+    public override void Init(Player owner)
+    {
+        base.Init(owner);
+        roofSpriteR.color = owner.Color;
+    }
     public Drill LaunchDrill()
     {
         Drill drill = Instantiate(drillPrefab);
@@ -34,11 +40,6 @@ public class DrillHouse : Building
     protected override void Awake()
     {
         base.Awake();
-    }
-    public override void Init(Player owner)
-    {
-        base.Init(owner);
-        roofSpriteR.color = owner.Color;
     }
 
     private void OnLaunchDrill(Drill drill)

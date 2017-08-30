@@ -245,7 +245,7 @@ public class Player : NetworkBehaviour
     }
     private void OnLaunchDrill(Drill drill)
     {
-        gold -= DrillHouse.drillCost;
+        gold -= DrillHouse.DrillCost;
         drill.onDig += OnDrillDig;
     }
     [ClientRpc]
@@ -299,7 +299,7 @@ public class Player : NetworkBehaviour
     {
         building.Init(this);
         buildings.Add(building);
-        building.onDestroyed += OnBuildingDestroyed;
+        building.onDestroyed += (Unit u) => OnBuildingDestroyed(u.GetComponent<Building>());
         gold -= building.Cost;
     }
     [ClientRpc]

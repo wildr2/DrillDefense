@@ -3,29 +3,22 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public abstract class Building : NetworkBehaviour
+public abstract class Building : Unit
 {
-    public Player Owner { get; private set; }
-
-    protected SpriteRenderer spriteR;
+    public AudioSource buildSound;
     public Transform templatePrefab;
     public abstract int Cost { get; }
 
-    public AudioSource buildSound;
 
-    public System.Action<Building> onDestroyed;
-
-
-    public virtual void Init(Player owner)
+    public override void Init(Player owner)
     {
-        Owner = owner;
+        base.Init(owner);
         if (owner.IsLocalHuman())
-            buildSound.Play(3000);
+            buildSound.PlayDelayed(0.05f);
     }
 
     protected virtual void Awake()
     {
-        spriteR = GetComponentInChildren<SpriteRenderer>();
     }
     protected virtual void OnCollisionEnter2D(Collision2D collision)
     {
@@ -38,6 +31,7 @@ public abstract class Building : NetworkBehaviour
             RpcOnCollideDrill();
         }
     }
+    
 
     [ClientRpc]
     private void RpcOnCollideDrill()
@@ -46,9 +40,6 @@ public abstract class Building : NetworkBehaviour
     }
     private void OnCollideDrill()
     {
-        Tools.Log("drill vs building");
         Destroy(gameObject);
-        if (onDestroyed != null)
-            onDestroyed(this);
     }
 }

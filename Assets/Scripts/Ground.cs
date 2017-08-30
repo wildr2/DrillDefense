@@ -7,6 +7,7 @@ public enum RockType { None, Any, Dirt, Grass, Gold, Hardrock }
 public class Ground : MonoBehaviour
 {
     public SeedManager seeder;
+    private bool initialized = false;
 
     // Colors
     public Color dirtColor = Color.black;
@@ -17,9 +18,8 @@ public class Ground : MonoBehaviour
     public Color dugTint = Color.black;
 
     // Rendering
-    public SpriteRenderer spriteR, spriteRBG;
-    private Sprite sprite;
-    private Texture2D tex, texBG;
+    public SpriteRenderer spriteR, spriteRBG, spriteRFog;
+    private Texture2D tex, texBG, texFog;
 
     // Measurements
     public float Width { get; private set; } // world units
@@ -35,7 +35,12 @@ public class Ground : MonoBehaviour
     /// </summary>
     private float[] topHeightMap, botHeightMap;
     private float[][] densityMap;
-    
+
+    // Vision
+    private List<Unit> visionUnits = new List<Unit>();
+    //private BitArray visionMap;
+    private bool[][] visionMap;
+
 
     // PUBLIC ACCESSORS
 
@@ -130,6 +135,12 @@ public class Ground : MonoBehaviour
 
     // PUBLIC MODIFIERS
 
+    public void RegisterVisionUnit(Unit unit)
+    {
+        visionUnits.Add(unit);
+        unit.onDestroyed += (Unit u) => { visionUnits.Remove(u); };
+    }
+
     /// <summary>
     /// Returns whether any ground was dug successfully
     /// </summary>
@@ -210,8 +221,12 @@ public class Ground : MonoBehaviour
     {
         Random.InitState(seed);
         MakeTerrain();
+        MakeVisionMap();
         MakeTextures();
         MakeSprites();
+        initialized = true;
+
+        StartCoroutine(UpdateVision());
     }
     private void MakeTerrain()
     {
@@ -295,7 +310,6 @@ public class Ground : MonoBehaviour
 
         for (int i = 0; i < pixelsWide; ++i)
         {
-            float t = (float)i / pixelsWide;
             float offsetTop = Mathf.PerlinNoise(perlinTop.x, perlinTop.y) * 3f; //(Mathf.Sin(t * Mathf.PI * 8f) + 1) * 0.3f;
             float offsetBot = Mathf.PerlinNoise(perlinBot.x, perlinBot.y) * 3f; //(Mathf.Sin(t * Mathf.PI * 8f) + 1) * 0.3f;
             perlinTop.x += 0.013f;
@@ -311,6 +325,8 @@ public class Ground : MonoBehaviour
         tex.filterMode = FilterMode.Point;
         texBG = new Texture2D(tex.width, tex.height);
         texBG.filterMode = FilterMode.Point;
+        texFog = new Texture2D(tex.width, tex.height);
+        texFog.filterMode = FilterMode.Point;
 
         // FIll texture from data
         int numPixels = pixelsWide * pixelsHigh;
@@ -344,13 +360,53 @@ public class Ground : MonoBehaviour
     private void MakeSprites()
     {
         // Foreground
-        sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
-        spriteR.sprite = sprite;
+        spriteR.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
         spriteR.color = Color.white;
 
         // Background
         spriteRBG.sprite = Sprite.Create(texBG, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
-        spriteRBG.color = Color.white;
+
+        // Fog
+        spriteRFog.sprite = Sprite.Create(texFog, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
+    }
+    private void MakeVisionMap()
+    {
+        //visionMap = new BitArray(pixelsWide * pixelsHigh);
+        //visionMap = new bool[pixelsWide][];
+        //for (int x = 0; x < pixelsWide; ++x)
+        //{
+        //    visionMap[x] = new bool[pixelsHigh];
+        //}
+        //AddVisionCircle(Vector2.zero, 1);
+    }
+
+    private IEnumerator UpdateVision()
+    {
+        while (true)
+        {
+            //for (int x = 0; x < pixelsWide; ++x)
+            //{
+            //    for (int y = 0; y < pixelsHigh; ++y)
+            //    {
+            //        visionMap[x][y] = false;
+            //    }
+            //}
+
+            Color[] fogColors = texFog.GetPixels();
+            for (int i = 0; i < fogColors.Length; ++i)
+            {
+                fogColors[i] = Color.white;
+            }
+            foreach (Unit unit in visionUnits)
+            {
+                AddVisionCircle(unit.transform.position, unit.VisionRadius, fogColors);
+            }
+            texFog.SetPixels(fogColors);
+            texFog.Apply();
+
+            yield return new WaitForSeconds(0.01f);
+            //yield return null;
+        }
     }
 
     private void DigAt(Vector2 groundPos)
@@ -363,9 +419,41 @@ public class Ground : MonoBehaviour
         tex.SetPixel(x, y, clearColor);
     }
 
+    private void AddVisionCircle(Vector2 worldPos, float radius, Color[] colors)
+    {
+        Vector2 origin = WorldToGroundPos(worldPos);
+        int originX = (int)origin.x;
+        int originY = (int)origin.y;
+        int r = (int)(radius * resolution);
+
+        for (int y = -r; y <= r; y++)
+        {
+            for (int x = -r; x <= r; x++)
+            {
+                float angle = Mathf.Atan2(y, x);
+                if (x * x + y * y <= r * r * (0.8f + 0.2f * Mathf.PerlinNoise(1000, Time.time * 0.5f + y*x * 0.002f)))
+                {
+                    int i = GroundPosToLinIndex(originX + x, originY + y);
+                    if (i < 0 || i >= colors.Length) continue;
+                    //visionMap.Set(i, true);
+                    //visionMap[originX + x][originY + y] = true;
+                    colors[i] = Color.clear;
+                }
+            }
+        }
+    }
+
 
     // PRIVATE ACCESSORS
     
+    private int GroundPosToLinIndex(Vector2 groundPos)
+    {
+        return (int)(groundPos.y * pixelsWide + groundPos.x);
+    }
+    private int GroundPosToLinIndex(int x, int y)
+    {
+        return (int)(y * pixelsWide + x);
+    }
     private Vector2 WorldToGroundPos(Vector2 worldPos)
     {
         Vector2 ret = worldPos;

@@ -3,23 +3,21 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class Drill : NetworkBehaviour
+public class Drill : Unit
 {
-    public Player Owner { get; private set; }
-
+    public override float VisionRadius { get { return 2; } }
     private float health = 60;
     private float speed = 1; // units per second
-    public SpriteRenderer colliderSprite;
 
+    public SpriteRenderer colliderSprite;
     private Ground ground;
 
     public System.Action<Dictionary<RockType, int>> onDig;
+ 
 
-
-
-    public virtual void Init(Player owner)
+    public override void Init(Player owner)
     {
-        Owner = owner;
+        base.Init(owner);
     }
     public void SetDirection(Vector2 dir)
     {
