@@ -323,7 +323,7 @@ public class Ground : MonoBehaviour
             perlinTop.x += 0.013f;
             perlinBot.x += 0.013f;
 
-            topHeightMap[i] = (Height - offsetTop) * resolution;
+            topHeightMap[i] = (Height - 1 - offsetTop) * resolution;
             botHeightMap[i] = offsetBot * resolution;
         }
     }
@@ -392,14 +392,15 @@ public class Ground : MonoBehaviour
     private void DigAt(int x, int y)
     {
         data[x][y] = RockType.None;
-        if (VisionAt(x, y))
-        {
-            tex.SetPixel(x, y, clearColor);
-        }
-        else
-        {
-            dugButFogged[x][y] = true;
-        }
+        dugButFogged[x][y] = true;
+        //if (VisionAt(x, y))
+        //{
+        //    tex.SetPixel(x, y, clearColor);
+        //}
+        //else
+        //{
+        //    dugButFogged[x][y] = true;
+        //}
     }
 
     private IEnumerator UpdateVision()
@@ -428,10 +429,24 @@ public class Ground : MonoBehaviour
             texFog.Apply();
 
             // Update other unit visibility
-            foreach (Unit unit in nonPovUnits)
+            for (int i = 0; i < nonPovUnits.Count; ++i)
             {
+                Unit unit = nonPovUnits[i];
                 Vector2 pos = WorldToGroundPos(unit.transform.position);
-                unit.SetVisible(VisionAt(pos));
+                if (VisionAt(pos))
+                {
+                    unit.SetVisible(true);
+                    if (unit.GetComponent<Building>() != null)
+                    {
+                        // Buildings (unmoving units) stay visible once seen
+                        nonPovUnits.Remove(unit);
+                        --i;
+                    }
+                }
+                else
+                {
+                    unit.SetVisible(false);
+                }
             }
 
             //yield return null;
@@ -462,12 +477,13 @@ public class Ground : MonoBehaviour
             float rFactor = 0.8f + 0.2f * Mathf.PerlinNoise(0, time * 0.7f + y * 0.04f);
             int len = (int)Mathf.Sqrt(r * r * rFactor - y * y);
             int gy = y + origin.y;
+            if (gy < 0 || gy >= pixelsHigh) continue;
 
             for (int x = -len; x < len; ++x)
             {
                 int gx = x + origin.x;
+                if (gx < 0 || gx >= pixelsWide) continue;
                 int i = gy * pixelsWide + gx;
-                if (i < 0 || i >= pixelsN) continue;
 
                 // Has vision
                 fogPixels[i] = 0;

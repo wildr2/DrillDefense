@@ -29,6 +29,7 @@ public class DataManager : MonoBehaviour
 
     // Debug
     public bool debug_powers = false;
+    public bool aiDoNothing = false;
 
     // Players
     public const int numPlayers = 2;
