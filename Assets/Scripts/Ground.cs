@@ -16,31 +16,43 @@ public class Ground : MonoBehaviour
     public Color hardrockColor = Color.black;
     private Color clearColor = Color.clear;
 
-    // Rendering
-    public SpriteRenderer spriteR;
-    private Texture2D tex, texFogData, texDugData;
+    // Generation Parameters
+    public const float Resolution = 15; // pixels per world unit
+    private const float GrassHeight = 0.2f; // world units
 
     // Measurements
     public float Width { get; private set; } // world units
     public float Height { get; private set; } // world units
     private int pixelsWide, pixelsHigh; // ground units (pixels)
     private int grassPixels;
-    public const float resolution = 15; // pixels per world unit
-    private const float grassHeight = 0.2f; // world units
+
+    // Rendering
+    public SpriteRenderer spriteR;
+    private Texture2D tex, texFogData, texDugData;
 
     // Data
     private RockType[][] data; // rock type for each pixel ([x][y] ground units)
-    private byte[] fogData, fogDataInitial;
-    private byte[] dugData;
+    private byte[] fogData, fogDataInitial, dugData;
     /// <summary>
     /// ideal (fractional) number of pixels (of tex) high (from bottom of image) for each pixel along horizontal
     /// </summary>
     private float[] topHeightMap, botHeightMap;
     private float[][] densityMap;
 
-    // Vision
+    // Byte data value constants
+    private const byte ValFog = 255;
+    private const byte ValNeverFog = 1;
+    private const byte ValNoFog = 0;
+    private const byte ValDug = 255;
+    private const byte ValDugButHidden = 1;
+    private const byte ValNotDug = 0;
+
+
+
+    // Vision System
     private List<Unit> povUnits = new List<Unit>();
     private List<Unit> nonPovUnits = new List<Unit>();
+
 
 
     // PUBLIC ACCESSORS
@@ -205,7 +217,7 @@ public class Ground : MonoBehaviour
     }
     public void DrillLine(Vector2 p1, Vector2 p2, float Width)
     {
-        int weight = Mathf.CeilToInt(resolution * Width);
+        int weight = Mathf.CeilToInt(Resolution * Width);
 
         DrawLineWeighted(tex, WorldToGroundPos(p1), WorldToGroundPos(p2),
             weight, clearColor);
@@ -236,9 +248,9 @@ public class Ground : MonoBehaviour
     }
     private void MakeTerrain()
     {
-        pixelsWide = (int)(resolution * Width);
-        pixelsHigh = (int)(resolution * Height);
-        grassPixels = (int)(grassHeight * resolution);
+        pixelsWide = (int)(Resolution * Width);
+        pixelsHigh = (int)(Resolution * Height);
+        grassPixels = (int)(GrassHeight * Resolution);
 
         CreateHeightMaps();
 
@@ -322,8 +334,8 @@ public class Ground : MonoBehaviour
             perlinTop.x += 0.013f;
             perlinBot.x += 0.013f;
 
-            topHeightMap[i] = pixelsHigh - 1 - offsetTop * resolution;
-            botHeightMap[i] = offsetBot * resolution;
+            topHeightMap[i] = pixelsHigh - 1 - offsetTop * Resolution;
+            botHeightMap[i] = offsetBot * Resolution;
         }
     }
     private void MakeTextures()
@@ -349,8 +361,10 @@ public class Ground : MonoBehaviour
                             rock == RockType.Hardrock ? Color.Lerp(dirtColor, hardrockColor, 0.5f + (int)(densityMap[x][y] * 5) / 5f) 
                             : Color.red;
 
-                fogDataInitial[i] = (byte)(y > topHeightMap[x] - grassPixels || y < botHeightMap[x]-2 ? 1 : 255);
-                dugData[i] = 0;
+                if (y > topHeightMap[x] - grassPixels || y < botHeightMap[x] - 2)
+                    fogDataInitial[i] = ValNeverFog;
+                else
+                    fogDataInitial[i] = ValFog;
 
                 ++i;
             }
@@ -366,7 +380,7 @@ public class Ground : MonoBehaviour
     }
     private void MakeSprites()
     {
-        spriteR.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
+        spriteR.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), Resolution);
         spriteR.material.SetTexture("_FogTex", texFogData);
         spriteR.material.SetTexture("_DugTex", texDugData);
     }
@@ -389,9 +403,9 @@ public class Ground : MonoBehaviour
 
         int i = GroundPosToLinIndex(x, y);
         if (VisionAt(x, y))
-            dugData[i] = 255; // dug
+            dugData[i] = ValDug;
         else
-            dugData[i] = 1; // dug but hidden by fog for this client
+            dugData[i] = ValDugButHidden;
     }
 
     private IEnumerator UpdateVisionRoutine()
@@ -406,7 +420,6 @@ public class Ground : MonoBehaviour
     private void UpdateVision()
     {
         // Reset fog data
-        //System.Array.Clear(fogData, 0, fogData.Length);
         System.Buffer.BlockCopy(fogDataInitial, 0, fogData, 0, fogData.Length);
 
         // Apply unit vision to fog data
@@ -443,7 +456,7 @@ public class Ground : MonoBehaviour
     private void ApplyVisionCircle(Vector2 worldPos, float radius)
     {
         IVector2 origin = new IVector2(WorldToGroundPos(worldPos));
-        int r = (int)(radius * resolution);
+        int r = (int)(radius * Resolution);
 
         float time = Time.time;
         int pixelsN = fogData.Length;
@@ -463,11 +476,11 @@ public class Ground : MonoBehaviour
                 int i = gy * pixelsWide + gx;
 
                 // Has vision
-                fogData[i] = 0;
-                if (dugData[i] == 1)
+                fogData[i] = ValNoFog;
+                if (dugData[i] == ValDugButHidden)
                 {
                     // Fog was hiding dug terrain that is now visible
-                    dugData[i] = 255;
+                    dugData[i] = ValDug;
                 }
             }
 
