@@ -74,9 +74,10 @@ public class Player : NetworkBehaviour
     {
         if (isLocalPlayer)
         {
-            if (ai && !DataManager.Instance.aiDoNothing)
+            if (ai)
             {
-                StartCoroutine(AIUpdate());
+                if (!DataManager.Instance.aiDoNothing)
+                    StartCoroutine(AIUpdate());
             }
             else
             {

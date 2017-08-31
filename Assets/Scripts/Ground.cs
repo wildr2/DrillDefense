@@ -17,8 +17,8 @@ public class Ground : MonoBehaviour
     private Color clearColor = Color.clear;
 
     // Rendering
-    public SpriteRenderer spriteR, spriteRBG, spriteRFog;
-    private Texture2D tex, texBG, texFog;
+    public SpriteRenderer spriteR;
+    private Texture2D tex, texFogData, texDugData;
 
     // Measurements
     public float Width { get; private set; } // world units
@@ -30,6 +30,8 @@ public class Ground : MonoBehaviour
 
     // Data
     private RockType[][] data; // rock type for each pixel ([x][y] ground units)
+    private byte[] fogData;
+    private byte[] dugData;
     /// <summary>
     /// ideal (fractional) number of pixels (of tex) high (from bottom of image) for each pixel along horizontal
     /// </summary>
@@ -39,8 +41,6 @@ public class Ground : MonoBehaviour
     // Vision
     private List<Unit> povUnits = new List<Unit>();
     private List<Unit> nonPovUnits = new List<Unit>();
-    private byte[] fogPixels;
-    private bool[][] dugButFogged;
 
 
     // PUBLIC ACCESSORS
@@ -245,7 +245,6 @@ public class Ground : MonoBehaviour
         // Fill Data
         data = new RockType[pixelsWide][];
         densityMap = new float[pixelsWide][];
-        dugButFogged = new bool[pixelsWide][];
 
         Vector2 perlinGoldStart = new Vector2(Random.value, Random.value) * 1000f;
         Vector2 perlinGold = perlinGoldStart;
@@ -259,7 +258,6 @@ public class Ground : MonoBehaviour
         {
             data[x] = new RockType[pixelsHigh];
             densityMap[x] = new float[pixelsHigh];
-            dugButFogged[x] = new bool[pixelsHigh];
 
             int botGrassEnd = (int)botHeightMap[x] + grassPixels;
             int topGrassStart = (int)topHeightMap[x] - grassPixels;
@@ -277,6 +275,7 @@ public class Ground : MonoBehaviour
 
             for (int y = topGrassStart; y < topHeightMap[x]; ++y)
                 data[x][y] = RockType.Grass;
+
 
             // Dirt, Gold, Hardrock
             for (int y = botGrassEnd; y < topGrassStart; ++y)
@@ -323,26 +322,19 @@ public class Ground : MonoBehaviour
             perlinTop.x += 0.013f;
             perlinBot.x += 0.013f;
 
-            topHeightMap[i] = (Height - 1 - offsetTop) * resolution;
+            topHeightMap[i] = pixelsHigh - 1 - offsetTop * resolution;
             botHeightMap[i] = offsetBot * resolution;
         }
     }
     private void MakeTextures()
     {
-        tex = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Point;
-        texBG = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
-        texBG.filterMode = FilterMode.Point;
-        texFog = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.Alpha8, false);
-        texFog.filterMode = FilterMode.Point;
-
-        // FIll texture from data
+        // Get data
         int numPixels = pixelsWide * pixelsHigh;
         Color[] colors = new Color[numPixels];
-        Color[] colorsBG = new Color[numPixels];
-        fogPixels = new byte[numPixels];
-        int i = 0;
+        fogData = new byte[numPixels];
+        dugData = new byte[numPixels];
 
+        int i = 0;
         for (int y = 0; y < pixelsHigh; ++y)
         {
             for (int x = 0; x < pixelsWide; ++x)
@@ -355,34 +347,33 @@ public class Ground : MonoBehaviour
                             rock == RockType.Hardrock ? Color.Lerp(dirtColor, hardrockColor, 0.5f + (int)(densityMap[x][y] * 5) / 5f) 
                             : Color.red;
 
-                colorsBG[i] = rock == RockType.None ? clearColor :
-                    Color.Lerp(colors[i], dirtColor, 0.8f);
+                fogData[i] = (byte)(y > topHeightMap[x] - grassPixels || y < botHeightMap[x]-2 ? 1 : 255);
+                dugData[i] = 0;
 
                 ++i;
             }
         }
+
+        // Create Texture2Ds
+        tex = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
         tex.SetPixels(colors);
         tex.Apply();
-        texBG.SetPixels(colorsBG);
-        texBG.Apply();
+        texFogData = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.Alpha8, false);
+        texDugData = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.Alpha8, false);
     }
     private void MakeSprites()
     {
-        // Foreground
         spriteR.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
-        spriteR.color = Color.white;
-
-        // Background
-        spriteRBG.sprite = Sprite.Create(texBG, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
-
-        // Fog
-        spriteRFog.sprite = Sprite.Create(texFog, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), resolution);
+        spriteR.material.SetTexture("_FogTex", texFogData);
+        spriteR.material.SetTexture("_DugTex", texDugData);
     }
 
     private void LateUpdate()
     {
         if (!initialized) return;
-        tex.Apply();
+        texDugData.LoadRawTextureData(dugData);
+        texDugData.Apply();
     }
 
     private void DigAt(Vector2 groundPos)
@@ -392,48 +383,41 @@ public class Ground : MonoBehaviour
     private void DigAt(int x, int y)
     {
         data[x][y] = RockType.None;
-        dugButFogged[x][y] = true;
-        //if (VisionAt(x, y))
-        //{
-        //    tex.SetPixel(x, y, clearColor);
-        //}
-        //else
-        //{
-        //    dugButFogged[x][y] = true;
-        //}
+
+        int i = GroundPosToLinIndex(x, y);
+        if (VisionAt(x, y))
+            dugData[i] = 255; // dug
+        else
+            dugData[i] = 1; // dug but hidden by fog for this client
     }
 
     private IEnumerator UpdateVision()
     {
         while (true)
         {
-            // Clear fog texture
-            for (int i = 0; i < fogPixels.Length; ++i)
+            // Reset fog data
+            for (int i = 0; i < fogData.Length; ++i)
             {
-                //Vector2 pos = LinIndexToGroundPos(i);
-                //bool sky = pos.y < botHeightMap[(int)pos.x] - 1
-                //        && pos.y > topHeightMap[(int)pos.x] - grassPixels - 1;
-
-                //fogPixels[i] = sky ? Color.clear : Color.white;
-                fogPixels[i] = 255;
+                if (fogData[i] != 1)
+                    fogData[i] = 255;
             }
 
-            // Clear unit vision to fog texture
+            // Apply unit vision to fog data
             foreach (Unit unit in povUnits)
             {
                 ApplyVisionCircle(unit.transform.position, unit.VisionRadius);
             }
 
-            // Apply fog texture changes
-            texFog.LoadRawTextureData(fogPixels);
-            texFog.Apply();
+            // Apply fog data texture changes
+            texFogData.LoadRawTextureData(fogData);
+            texFogData.Apply();
 
             // Update other unit visibility
             for (int i = 0; i < nonPovUnits.Count; ++i)
             {
                 Unit unit = nonPovUnits[i];
                 Vector2 pos = WorldToGroundPos(unit.transform.position);
-                if (VisionAt(pos))
+                if (InBounds(pos) && VisionAt(pos))
                 {
                     unit.SetVisible(true);
                     if (unit.GetComponent<Building>() != null)
@@ -449,7 +433,6 @@ public class Ground : MonoBehaviour
                 }
             }
 
-            //yield return null;
             yield return new WaitForSeconds(0.1f);
         }
     }
@@ -458,18 +441,8 @@ public class Ground : MonoBehaviour
         IVector2 origin = new IVector2(WorldToGroundPos(worldPos));
         int r = (int)(radius * resolution);
 
-        //int x0 = Mathf.Max(0, origin.x - r);
-        //if (x0 >= pixelsWide) return;
-        //int x1 = Mathf.Min(pixelsWide-1, origin.x + r);
-        //if (x1 < 0) return;
-
-        //int y0 = Mathf.Max(0, origin.y - r);
-        //if (y0 >= pixelsHigh) return;
-        //int y1 = Mathf.Min(pixelsHigh-1, origin.y + r);
-        //if (y1 < 0) return;
-
         float time = Time.time;
-        int pixelsN = fogPixels.Length;
+        int pixelsN = fogData.Length;
 
 
         for (int y = -r; y < r; ++y)
@@ -486,43 +459,18 @@ public class Ground : MonoBehaviour
                 int i = gy * pixelsWide + gx;
 
                 // Has vision
-                fogPixels[i] = 0;
-
-                if (dugButFogged[gx][gy])
+                if (fogData[i] != 1)
+                {
+                    fogData[i] = 0;
+                }
+                if (dugData[i] == 1)
                 {
                     // Fog was hiding dug terrain that is now visible
-                    tex.SetPixel(gx, gy, clearColor);
-                    dugButFogged[gx][gy] = false;
+                    dugData[i] = 255;
                 }
             }
 
         }
-
-        //for (int y = y0; y <= y1; ++y)
-        //{
-        //    int i = y * pixelsWide + x0;
-        //    int relY = y - origin.y;
-        //    float rFactor = 0.8f + 0.2f * Mathf.PerlinNoise(0, time * 0.7f + relY * 0.06f);
-
-
-        //    for (int x = x0; x <= x1; ++x)
-        //    {
-        //        int relX = x - origin.x;
-        //        if (relX * relX + relY * relY <= r * r * rFactor)
-        //        {
-        //            // Has vision
-        //            fogPixels[i] = 0;
-
-        //            if (dugButFogged[x][y])
-        //            {
-        //                // Fog was hiding dug terrain that is now visible
-        //                tex.SetPixel(x, y, clearColor);
-        //                dugButFogged[x][y] = false;
-        //            }
-        //        }
-        //        ++i;
-        //    }
-        //}
     }
 
 
@@ -530,11 +478,11 @@ public class Ground : MonoBehaviour
     
     private bool VisionAt(Vector2 groundPos)
     {
-        return texFog.GetPixel((int)groundPos.x, (int)groundPos.y).a == 0;
+        return VisionAt((int)groundPos.x, (int)groundPos.y);
     }
     private bool VisionAt(int groundX, int groundY)
     {
-        return texFog.GetPixel(groundX, groundX).a == 0;
+        return fogData[GroundPosToLinIndex(groundX, groundY)] < 10;
     }
 
     private int GroundPosToLinIndex(Vector2 groundPos)
@@ -570,6 +518,10 @@ public class Ground : MonoBehaviour
             return RockType.None;
         }
         return data[groundX][groundY];
+    }
+    private bool InBounds(Vector2 groundPos)
+    {
+        return InBounds((int)groundPos.x, (int)groundPos.y);
     }
     private bool InBounds(int groundX, int groundY)
     {
