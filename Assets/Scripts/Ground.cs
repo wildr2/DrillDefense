@@ -30,7 +30,7 @@ public class Ground : MonoBehaviour
 
     // Data
     private RockType[][] data; // rock type for each pixel ([x][y] ground units)
-    private byte[] fogData;
+    private byte[] fogData, fogDataInitial;
     private byte[] dugData;
     /// <summary>
     /// ideal (fractional) number of pixels (of tex) high (from bottom of image) for each pixel along horizontal
@@ -232,7 +232,7 @@ public class Ground : MonoBehaviour
         MakeSprites();
         initialized = true;
 
-        StartCoroutine(UpdateVision());
+        //StartCoroutine(UpdateVision());
     }
     private void MakeTerrain()
     {
@@ -331,8 +331,10 @@ public class Ground : MonoBehaviour
         // Get data
         int numPixels = pixelsWide * pixelsHigh;
         Color[] colors = new Color[numPixels];
+        fogDataInitial = new byte[numPixels];
         fogData = new byte[numPixels];
         dugData = new byte[numPixels];
+        
 
         int i = 0;
         for (int y = 0; y < pixelsHigh; ++y)
@@ -347,7 +349,7 @@ public class Ground : MonoBehaviour
                             rock == RockType.Hardrock ? Color.Lerp(dirtColor, hardrockColor, 0.5f + (int)(densityMap[x][y] * 5) / 5f) 
                             : Color.red;
 
-                fogData[i] = (byte)(y > topHeightMap[x] - grassPixels || y < botHeightMap[x]-2 ? 1 : 255);
+                fogDataInitial[i] = (byte)(y > topHeightMap[x] - grassPixels || y < botHeightMap[x]-2 ? 1 : 255);
                 dugData[i] = 0;
 
                 ++i;
@@ -374,6 +376,7 @@ public class Ground : MonoBehaviour
         if (!initialized) return;
         texDugData.LoadRawTextureData(dugData);
         texDugData.Apply();
+        UpdateVision();
     }
 
     private void DigAt(Vector2 groundPos)
@@ -391,49 +394,50 @@ public class Ground : MonoBehaviour
             dugData[i] = 1; // dug but hidden by fog for this client
     }
 
-    private IEnumerator UpdateVision()
+    private IEnumerator UpdateVisionRoutine()
     {
         while (true)
         {
-            // Reset fog data
-            for (int i = 0; i < fogData.Length; ++i)
-            {
-                if (fogData[i] != 1)
-                    fogData[i] = 255;
-            }
-
-            // Apply unit vision to fog data
-            foreach (Unit unit in povUnits)
-            {
-                ApplyVisionCircle(unit.transform.position, unit.VisionRadius);
-            }
-
-            // Apply fog data texture changes
-            texFogData.LoadRawTextureData(fogData);
-            texFogData.Apply();
-
-            // Update other unit visibility
-            for (int i = 0; i < nonPovUnits.Count; ++i)
-            {
-                Unit unit = nonPovUnits[i];
-                Vector2 pos = WorldToGroundPos(unit.transform.position);
-                if (InBounds(pos) && VisionAt(pos))
-                {
-                    unit.SetVisible(true);
-                    if (unit.GetComponent<Building>() != null)
-                    {
-                        // Buildings (unmoving units) stay visible once seen
-                        nonPovUnits.Remove(unit);
-                        --i;
-                    }
-                }
-                else
-                {
-                    unit.SetVisible(false);
-                }
-            }
+            
 
             yield return new WaitForSeconds(0.1f);
+        }
+    }
+    private void UpdateVision()
+    {
+        // Reset fog data
+        //System.Array.Clear(fogData, 0, fogData.Length);
+        System.Buffer.BlockCopy(fogDataInitial, 0, fogData, 0, fogData.Length);
+
+        // Apply unit vision to fog data
+        foreach (Unit unit in povUnits)
+        {
+            ApplyVisionCircle(unit.transform.position, unit.VisionRadius);
+        }
+
+        // Apply fog data texture changes
+        texFogData.LoadRawTextureData(fogData);
+        texFogData.Apply();
+
+        // Update other unit visibility
+        for (int i = 0; i < nonPovUnits.Count; ++i)
+        {
+            Unit unit = nonPovUnits[i];
+            Vector2 pos = WorldToGroundPos(unit.transform.position);
+            if (InBounds(pos) && VisionAt(pos))
+            {
+                unit.SetVisible(true);
+                if (unit.GetComponent<Building>() != null)
+                {
+                    // Buildings (unmoving units) stay visible once seen
+                    nonPovUnits.Remove(unit);
+                    --i;
+                }
+            }
+            else
+            {
+                unit.SetVisible(false);
+            }
         }
     }
     private void ApplyVisionCircle(Vector2 worldPos, float radius)
@@ -459,10 +463,7 @@ public class Ground : MonoBehaviour
                 int i = gy * pixelsWide + gx;
 
                 // Has vision
-                if (fogData[i] != 1)
-                {
-                    fogData[i] = 0;
-                }
+                fogData[i] = 0;
                 if (dugData[i] == 1)
                 {
                     // Fog was hiding dug terrain that is now visible
