@@ -216,14 +216,16 @@ public class Ground : MonoBehaviour
         dugData = new byte[numPixels];
 
         // Fill data
-        CreateHeightMaps();
+        CreateHeightMaps(0.2f);
         FillSkyGrassDirt();
-        FillRocks(RockType.Hardrock, 0.6f, 0.02f);
-        FillRocks(RockType.Gold, 0.6f, 0.03f);
+        FillRocks(RockType.Gold, 0.6f, 0.35f);
+        FillRocks(RockType.Hardrock, 0.55f, 0.3f);
         FillInitialFog();
     }
-    private void CreateHeightMaps()
+    private void CreateHeightMaps(float perlinMove = 0.2f)
     {
+        perlinMove /= Resolution;
+
         topHeightMap = new float[pixelsWide];
         botHeightMap = new float[pixelsWide];
 
@@ -234,8 +236,8 @@ public class Ground : MonoBehaviour
         {
             float offsetTop = Mathf.PerlinNoise(perlinTop.x, perlinTop.y) * 3f;
             float offsetBot = Mathf.PerlinNoise(perlinBot.x, perlinBot.y) * 3f;
-            perlinTop.x += 0.013f;
-            perlinBot.x += 0.013f;
+            perlinTop.x += perlinMove;
+            perlinBot.x += perlinMove;
 
             topHeightMap[x] = pixelsHigh - 1 - offsetTop * Resolution;
             botHeightMap[x] = offsetBot * Resolution;
@@ -270,8 +272,10 @@ public class Ground : MonoBehaviour
                 data[x][y] = RockType.Dirt;
         }
     }
-    private void FillRocks(RockType rock, float perlinThreshold = 0.6f, float perlinMove = 0.03f)
+    private void FillRocks(RockType rock, float perlinThreshold = 0.6f, float perlinMove = 0.45f)
     {
+        perlinMove /= Resolution;
+
         Vector2 perlinStart = new Vector2(Random.value, Random.value) * 1000f;
         Vector2 perlin = perlinStart;
 
@@ -285,6 +289,7 @@ public class Ground : MonoBehaviour
                 float p = Mathf.PerlinNoise(perlin.x, perlin.y);
                 if (p > perlinThreshold)
                 {
+                    // Fill rock here
                     data[x][y] = rock;
                     densityMap[x][y] = (p - perlinThreshold) / perlinThreshold;
                 }
@@ -292,6 +297,7 @@ public class Ground : MonoBehaviour
                 perlin.y += perlinMove;
             }
 
+            // Update perlin pos
             perlin.x += perlinMove;
             perlin.y = perlinStart.y;
         }
