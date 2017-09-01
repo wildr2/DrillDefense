@@ -8,6 +8,7 @@ public class Ground : MonoBehaviour
 {
     public SeedManager seeder;
     private bool initialized = false;
+    public int NumRockTypes { get; private set; }
 
     // Colors
     public Color dirtColor = Color.black;
@@ -46,8 +47,6 @@ public class Ground : MonoBehaviour
     private const byte ValDug = 255;
     private const byte ValDugButHidden = 1;
     private const byte ValNotDug = 0;
-
-
 
     // Vision System
     private List<Unit> povUnits = new List<Unit>();
@@ -215,6 +214,41 @@ public class Ground : MonoBehaviour
 
         return dugAny;
     }
+    public int DigPolygon(PolygonCollider2D collider, out int[] rockCounts)
+    {
+        rockCounts = new int[NumRockTypes];
+        int digCount = 0;
+
+        Bounds bounds = collider.bounds;
+        Vector2 minGPos = WorldToGroundPos(bounds.min);
+        Vector2 maxGPos = WorldToGroundPos(bounds.max);
+
+        Vector2 wp = bounds.min;
+        float deltaWp = 1f / Resolution;
+        float wy0 = wp.y;
+
+        for (int x = (int)minGPos.x; x <= (int)maxGPos.x; ++x)
+        {
+            for (int y = (int)minGPos.y; y <= (int)maxGPos.y; ++y)
+            {
+                if (collider.OverlapPoint(wp))
+                {
+                    RockType rock = data[x][y];
+                    rockCounts[(int)rock] += 1;
+                    if (rock != RockType.None)
+                    {
+                        DigAt(x, y);
+                        ++digCount;
+                    }   
+                }
+                wp.y += deltaWp;
+            }
+            wp.x += deltaWp;
+            wp.y = wy0;
+        }
+
+        return digCount;
+    }
     public void DrillLine(Vector2 p1, Vector2 p2, float Width)
     {
         int weight = Mathf.CeilToInt(Resolution * Width);
@@ -228,6 +262,8 @@ public class Ground : MonoBehaviour
 
     private void Awake()
     {
+        NumRockTypes = Tools.EnumLength(typeof(RockType));
+
         // Determine width and height (world units)
         Width = transform.localScale.x;
         Height = transform.localScale.y;
@@ -512,13 +548,12 @@ public class Ground : MonoBehaviour
         return new Vector2(linIndex % pixelsWide,
             Mathf.FloorToInt((float)linIndex / pixelsWide));
     }
-    private Vector2 WorldToGroundPos(Vector2 worldPos)
+    private Vector2 WorldToGroundPos(Vector2 pos)
     {
-        Vector2 ret = worldPos;
-        ret -= (Vector2)transform.position;
-        ret.x = ((ret.x / Width) + 0.5f) * pixelsWide;
-        ret.y = ((ret.y / Height) + 0.5f) * pixelsHigh;
-        return ret;
+        pos -= (Vector2)transform.position;
+        pos.x = ((pos.x / Width) + 0.5f) * pixelsWide;
+        pos.y = ((pos.y / Height) + 0.5f) * pixelsHigh;
+        return pos;
     }
     private RockType GetRockTypeAtGPos(Vector2 groundPos)
     {
@@ -595,5 +630,17 @@ public class Ground : MonoBehaviour
         }
 
         tex.SetPixels32(colors);
+    }
+
+    private static bool SameSideOfLine(Vector2 p1, Vector2 p2, Vector2 a, Vector2 b)
+    {
+        Vector3 cp1 = Vector3.Cross(b - a, p1 - a);
+        Vector3 cp2 = Vector3.Cross(b - a, p2 - a);
+        return Vector3.Dot(cp1, cp2) >= 0;
+    }
+    private static bool PointInTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
+    {
+        return SameSideOfLine(p, a, b, c) && SameSideOfLine(p, b, a, c) &&
+            SameSideOfLine(p, c, a, b);
     }
 }

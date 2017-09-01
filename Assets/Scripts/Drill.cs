@@ -10,6 +10,7 @@ public class Drill : Unit
     private float speed = 1; // units per second
 
     public SpriteRenderer colliderSprite;
+    new private PolygonCollider2D collider;
     private Ground ground;
 
     public System.Action<Dictionary<RockType, int>> onDig;
@@ -30,21 +31,28 @@ public class Drill : Unit
     {
         base.Awake();
         ground = FindObjectOfType<Ground>();
+        collider = GetComponent<PolygonCollider2D>();
         //rb = GetComponent<Rigidbody2D>();
     }
     private void Update()
     {
         // Dig
-        Dictionary<RockType, int> digCount;
-        bool dug = ground.DigWithSprite(colliderSprite, out digCount);
+        int[] rockCounts;
 
-        if (dug)
+        //Vector2 a = (Vector2)transform.position - (Vector2)transform.up * 1;
+        //Vector2 b = (Vector2)transform.position - (Vector2)transform.right * 0.5f;
+        //Vector2 c = (Vector2)transform.position + (Vector2)transform.right * 0.5f;
+
+        int dugCount = ground.DigPolygon(collider, out rockCounts);
+
+        if (dugCount > 0)
         {
+            health -= 1;
             // Decrease Health
-            health -= digCount[RockType.Gold] / 10f;
-            health -= digCount[RockType.Hardrock] / 2f;
+            //health -= digCount[RockType.Gold] / 10f;
+            //health -= digCount[RockType.Hardrock] / 2f;
 
-            if (onDig != null) onDig(digCount);
+            //if (onDig != null) onDig(digCount);
         }
 
         // Move
