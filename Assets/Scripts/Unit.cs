@@ -28,7 +28,8 @@ public abstract class Unit : NetworkBehaviour
 
     protected void Kill(Player killer)
     {
-        killer.gold += KillGold;
+        if (killer != Owner)
+            killer.gold += KillGold;
         Destroy(gameObject);
     }
 
