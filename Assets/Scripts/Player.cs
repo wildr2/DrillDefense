@@ -180,18 +180,34 @@ public class Player : NetworkBehaviour
         aimLine.enabled = true;
         isPlacing = true;
 
+        Drill nearbyDrill = null;
+        bool drillLock = false;
+
         while (true)
         {
-            // Set template position / orientation
             Vector2 mouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            Drill nearbyDrill = GetNearestDrill(mouse, 2, true);
-            if (nearbyDrill != null)
+ 
+            if (drillLock)
             {
-                template.position = mouse;
-                template.up = mouse - (Vector2)nearbyDrill.transform.position;
+                if (nearbyDrill == null)
+                {
+                    // Locked drill destroyed - cancel
+                    break;
+                }
+
+                // Set template pos / ori near locked drill
+                Vector2 drillPos = nearbyDrill.transform.position;
+                template.up = drillPos - mouse;
+                template.position = drillPos + (Vector2)template.up * 1;
             }
             else
             {
+                // Lock to nearby drill
+                nearbyDrill = GetNearestDrill(mouse, 1, true);
+                if (nearbyDrill != null)
+                    drillLock = true;
+
+                // Set template pos / ori on surface
                 SetOnSurface(template, mouse.x);
             }
 
