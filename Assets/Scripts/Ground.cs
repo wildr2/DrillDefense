@@ -25,6 +25,8 @@ public class Ground : MonoBehaviour
     // Measurements
     private int pixelsWide, pixelsHigh; // ground units (pixels)
     private int grassPixels;
+    // resolution independent value per rock (pixel)
+    public static float RockValue = 1f / (Resolution * Resolution); 
 
     // Rendering
     public SpriteRenderer spriteR;
@@ -50,7 +52,6 @@ public class Ground : MonoBehaviour
     private List<Player> povPlayers = new List<Player>();
     private List<Unit> povUnits = new List<Unit>();
     private List<Unit> nonPovUnits = new List<Unit>();
-
 
 
     // PUBLIC ACCESSORS

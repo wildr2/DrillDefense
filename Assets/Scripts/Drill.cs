@@ -6,7 +6,7 @@ using UnityEngine.Networking;
 public class Drill : Unit
 {
     public override float VisionRadius { get { return 2; } }
-    private float health = 60;
+    private float health = 1;
     private float speed = 1; // units per second
 
     public SpriteRenderer colliderSprite;
@@ -41,8 +41,8 @@ public class Drill : Unit
         if (ground.DigPolygon(collider, out rockCounts) > 0)
         {
             // Decrease Health
-            health -= rockCounts[(int)RockType.Gold] / 10f;
-            health -= rockCounts[(int)RockType.Hardrock] / 2f;
+            health -= rockCounts[(int)RockType.Gold] * Ground.RockValue * 0.5f;
+            health -= rockCounts[(int)RockType.Hardrock] * Ground.RockValue * 3f;
 
             if (onDig != null) onDig(rockCounts);
         }

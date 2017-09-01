@@ -10,6 +10,8 @@ public class Player : NetworkBehaviour
     private Ground ground;
     private GameManager gm;
 
+    private LineRenderer aimLine;
+
     [SyncVar] public short id;
     [SyncVar] private float gold; // TODO: make short and divide / round when retrieving?
 
@@ -19,13 +21,13 @@ public class Player : NetworkBehaviour
     public Color Color { get; private set; }
     public bool ai = false;
     public bool IsTop { get; private set; }
-
     public Vector2 Up { get { return IsTop ? Vector2.up : -Vector2.up; } }
-    private List<Building> buildings = new List<Building>();
-    private LineRenderer aimLine;
 
+    // Construction
+    private List<Building> buildings = new List<Building>();
     private bool isPlacing = false;
 
+    // Events
     public System.Action onInputBuild;
     public System.Action onInputLaunchDrill;
 
@@ -159,7 +161,7 @@ public class Player : NetworkBehaviour
     }
     private void OnDrillDig(int[] rockCounts)
     {
-        gold += rockCounts[(int)RockType.Gold] / 10f;
+        gold += rockCounts[(int)RockType.Gold] * Ground.RockValue * 30;
     }
 
     private void SetAimLine(Vector2 p1, Vector2 p2)
