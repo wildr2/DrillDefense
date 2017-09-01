@@ -438,8 +438,9 @@ public class Ground : MonoBehaviour
             Unit unit = nonPovUnits[i];
             Vector2 pos = WorldToGroundPos(unit.transform.position);
             bool inXbounds = pos.x >= 0 && pos.x < pixelsWide;
+            bool inYbounds = pos.y >= 0 && pos.y < pixelsHigh;
 
-            if (inXbounds && VisionAt(GroundPosToLinIndex(pos)))
+            if (!inYbounds || (inXbounds && VisionAt(GroundPosToLinIndex(pos))))
             {
                 unit.SetVisible(true);
                 if (unit.GetComponent<Building>() != null)
@@ -494,7 +495,7 @@ public class Ground : MonoBehaviour
     
     private bool VisionAt(int groundLinIndex)
     {
-        return fogData[groundLinIndex] < 10;
+        return fogData[groundLinIndex] == 0;
     }
 
     private int GroundPosToLinIndex(Vector2 groundPos)
