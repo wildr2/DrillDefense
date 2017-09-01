@@ -15,7 +15,9 @@ public abstract class Unit : NetworkBehaviour
     public virtual void Init(Player owner)
     {
         Owner = owner;
-        if (owner.IsLocalHuman())
+
+        // Setup vision
+        if (owner.ClientPOV)
         {
             SetVisible(true);
         }

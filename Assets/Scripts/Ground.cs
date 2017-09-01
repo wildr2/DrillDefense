@@ -220,8 +220,8 @@ public class Ground : MonoBehaviour
         int digCount = 0;
 
         Bounds bounds = collider.bounds;
-        Vector2 minGPos = WorldToGroundPos(bounds.min);
-        Vector2 maxGPos = WorldToGroundPos(bounds.max);
+        Vector2 minGPos = ClampToBounds(WorldToGroundPos(bounds.min));
+        Vector2 maxGPos = ClampToBounds(WorldToGroundPos(bounds.max));
 
         Vector2 wp = bounds.min;
         float deltaWp = 1f / Resolution;
@@ -280,7 +280,7 @@ public class Ground : MonoBehaviour
         MakeSprites();
         initialized = true;
 
-        //StartCoroutine(UpdateVision());
+        //StartCoroutine(UpdateVisionRoutine());
     }
     private void MakeTerrain()
     {
@@ -459,8 +459,7 @@ public class Ground : MonoBehaviour
     {
         while (true)
         {
-            
-
+            UpdateVision();
             yield return new WaitForSeconds(0.1f);
         }
     }
@@ -484,7 +483,9 @@ public class Ground : MonoBehaviour
         {
             Unit unit = nonPovUnits[i];
             Vector2 pos = WorldToGroundPos(unit.transform.position);
-            if (InBounds(pos) && VisionAt(GroundPosToLinIndex(pos)))
+            bool inXbounds = pos.x >= 0 && pos.x < pixelsWide;
+
+            if (inXbounds && VisionAt(GroundPosToLinIndex(pos)))
             {
                 unit.SetVisible(true);
                 if (unit.GetComponent<Building>() != null)
@@ -544,7 +545,7 @@ public class Ground : MonoBehaviour
 
     private int GroundPosToLinIndex(Vector2 groundPos)
     {
-        return (int)(groundPos.y * pixelsWide + groundPos.x);
+        return (int)groundPos.y * pixelsWide + (int)groundPos.x;
     }
     private int GroundPosToLinIndex(int x, int y)
     {
@@ -586,6 +587,12 @@ public class Ground : MonoBehaviour
     private bool BoundsOverlap(Bounds otherBounds)
     {
         return spriteR.bounds.Intersects(otherBounds);
+    }
+    private Vector2 ClampToBounds(Vector2 groundPos)
+    {
+        groundPos.x = Mathf.Min(Mathf.Max(0, groundPos.x), pixelsWide-1);
+        groundPos.y = Mathf.Min(Mathf.Max(0, groundPos.y), pixelsHigh - 1);
+        return groundPos;
     }
 
 
@@ -650,20 +657,4 @@ public class Ground : MonoBehaviour
         return SameSideOfLine(p, a, b, c) && SameSideOfLine(p, b, a, c) &&
             SameSideOfLine(p, c, a, b);
     }
-}
-
-
-public class Rock
-{
-    public const short None = 0;
-    public const short Any = 1;
-    public const short Dirt = 2;
-    public const short Grass = 3;
-    public const short Gold = 4;
-    public const short Hard = 5;
-    public const int N = 6;
-
-    public short value = None;
-
-
 }
