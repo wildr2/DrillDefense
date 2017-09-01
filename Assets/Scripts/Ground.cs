@@ -37,6 +37,7 @@ public class Ground : MonoBehaviour
     private byte[] fogData, fogDataInitial, dugData;
     /// <summary>
     /// ideal (fractional) number of pixels (of tex) high (from bottom of image) for each pixel along horizontal
+    /// - cast to int for exact exclusive height
     /// </summary>
     private float[] topHeightMap, botHeightMap;
     private float[][] densityMap;
@@ -127,12 +128,16 @@ public class Ground : MonoBehaviour
         {
             if (player.IsTop)
             {
-                for (int y = (int)topHeightMap[x] - grassPixels; y < pixelsHigh; ++y)
+                int topGrassStart = (int)topHeightMap[x] - grassPixels;
+
+                for (int y = topGrassStart; y < (int)topHeightMap[x]; ++y)
                     fogDataInitial[GroundPosToLinIndex(x, y)] = ValNoFog;
             }
             else
             {
-                for (int y = (int)botHeightMap[x] + grassPixels; y >= 0; --y)
+                int botGrassStart = (int)botHeightMap[x] + grassPixels;
+
+                for (int y = botGrassStart; y > (int)botHeightMap[x]; --y)
                     fogDataInitial[GroundPosToLinIndex(x, y)] = ValNoFog;
             }
         }
@@ -251,25 +256,25 @@ public class Ground : MonoBehaviour
             data[x] = new RockType[pixelsHigh];
             densityMap[x] = new float[pixelsHigh];
 
-            int botGrassEnd = (int)botHeightMap[x] + grassPixels;
+            int botGrassStart = (int)botHeightMap[x] + grassPixels;
             int topGrassStart = (int)topHeightMap[x] - grassPixels;
 
             // Sky - clear
-            for (int y = 0; y < botHeightMap[x]; ++y)
+            for (int y = 0; y <= (int)botHeightMap[x]; ++y)
                 data[x][y] = RockType.None;
 
             for (int y = (int)topHeightMap[x]; y < pixelsHigh; ++y)
                 data[x][y] = RockType.None;
 
             // Grass
-            for (int y = (int)botHeightMap[x]; y < botGrassEnd; ++y)
+            for (int y = botGrassStart; y > (int)botHeightMap[x]; --y)
                 data[x][y] = RockType.Grass;
 
-            for (int y = topGrassStart; y < topHeightMap[x]; ++y)
+            for (int y = topGrassStart; y < (int)topHeightMap[x]; ++y)
                 data[x][y] = RockType.Grass;
 
             // Dirt
-            for (int y = botGrassEnd; y < topGrassStart; ++y)
+            for (int y = botGrassStart + 1; y < topGrassStart; ++y)
                 data[x][y] = RockType.Dirt;
         }
     }
@@ -282,10 +287,10 @@ public class Ground : MonoBehaviour
 
         for (int x = 0; x < pixelsWide; ++x)
         {
-            int botGrassEnd = (int)botHeightMap[x] + grassPixels;
+            int botGrassStart = (int)botHeightMap[x] + grassPixels;
             int topGrassStart = (int)topHeightMap[x] - grassPixels;
 
-            for (int y = botGrassEnd; y < topGrassStart; ++y)
+            for (int y = botGrassStart + 1; y < topGrassStart; ++y)
             {
                 float p = Mathf.PerlinNoise(perlin.x, perlin.y);
                 if (p > perlinThreshold)
@@ -307,18 +312,18 @@ public class Ground : MonoBehaviour
     {
         for (int x = 0; x < pixelsWide; ++x)
         {
-            int botGrassEnd = (int)botHeightMap[x] + grassPixels;
+            int botGrassStart = (int)botHeightMap[x] + grassPixels;
             int topGrassStart = (int)topHeightMap[x] - grassPixels;
 
             // Sky - clear
-            for (int y = 0; y < (int)botHeightMap[x]; ++y)
+            for (int y = 0; y <= (int)botHeightMap[x]; ++y)
                 fogDataInitial[GroundPosToLinIndex(x, y)] = ValNoFog;
 
             for (int y = (int)topHeightMap[x]; y < pixelsHigh; ++y)
                 fogDataInitial[GroundPosToLinIndex(x, y)] = ValNoFog;
 
             // Everything else
-            for (int y = (int)botHeightMap[x]; y < topHeightMap[x]; ++y)
+            for (int y = (int)botHeightMap[x] + 1; y < (int)topHeightMap[x]; ++y)
                 fogDataInitial[GroundPosToLinIndex(x, y)] = ValFog;
         }
     }
