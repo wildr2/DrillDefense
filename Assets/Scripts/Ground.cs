@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum RockType { None, Any, Dirt, Grass, Gold, Hardrock }
+public enum RockType { None, Any, Dirt, Grass, Gold, Hardrock, Rock3, Rock4 }
 
 public class Ground : MonoBehaviour
 {
@@ -14,11 +14,13 @@ public class Ground : MonoBehaviour
     public Color grassColor = Color.green;
     public Color goldColor = Color.yellow;
     public Color hardrockColor = Color.black;
+    public Color rock3Color = Color.black;
+    public Color rock4Color = Color.black;
     private Color clearColor = Color.clear;
 
     // Generation Parameters
     public const float Width = 32; // world units
-    public const float Height = 25; // world units
+    public const float Height = 35; // world units
     public const float Resolution = 15; // pixels per world unit
     private const float GrassHeight = 0.2f; // world units
 
@@ -165,6 +167,7 @@ public class Ground : MonoBehaviour
         Vector2 minGPos = ClampToBounds(WorldToGroundPos(bounds.min));
         Vector2 maxGPos = ClampToBounds(WorldToGroundPos(bounds.max));
 
+        Vector2 center = bounds.center;
         Vector2 wp = bounds.min;
         float deltaWp = 1f / Resolution;
         float wy0 = wp.y;
@@ -224,8 +227,11 @@ public class Ground : MonoBehaviour
         // Fill data
         CreateHeightMaps(0.2f);
         FillSkyGrassDirt();
-        FillRocks(RockType.Gold, 0.6f, 0.35f);
-        FillRocks(RockType.Hardrock, 0.55f, 0.3f);
+        FillRocks(RockType.Rock4, 0.6f, 0.4f, 0.5f, 1f);
+        FillRocks(RockType.Gold, 0.55f, 0.35f, 0.25f, 1f);
+        FillRocks(RockType.Rock3, 0.7f, 0.5f, 0.5f, 0.5f);
+        FillRocks(RockType.Hardrock, 0.55f, 0.25f, 0f, 1f);
+        
         FillInitialFog();
     }
     private void CreateHeightMaps(float perlinMove = 0.2f)
@@ -278,7 +284,8 @@ public class Ground : MonoBehaviour
                 data[x][y] = RockType.Dirt;
         }
     }
-    private void FillRocks(RockType rock, float perlinThreshold = 0.6f, float perlinMove = 0.45f)
+    private void FillRocks(RockType rock, float perlinThreshold = 0.6f,
+        float perlinMove = 0.45f, float depthEffect = 0, float idealDepth = 1)
     {
         perlinMove /= Resolution;
 
@@ -292,12 +299,16 @@ public class Ground : MonoBehaviour
 
             for (int y = botGrassStart + 1; y < topGrassStart; ++y)
             {
-                float p = Mathf.PerlinNoise(perlin.x, perlin.y);
+                float depth = 1 - (Mathf.Abs(y - (pixelsHigh / 2f)) / pixelsHigh) * 2f;
+                float idealDepthCloseness = 1 - Mathf.Abs(idealDepth - depth);
+                float d = Mathf.Pow(idealDepthCloseness, depthEffect);
+                float p = Mathf.PerlinNoise(perlin.x, perlin.y) * d;
+                
                 if (p > perlinThreshold)
                 {
                     // Fill rock here
                     data[x][y] = rock;
-                    densityMap[x][y] = (p - perlinThreshold) / perlinThreshold;
+                    densityMap[x][y] = (p - perlinThreshold) / (1 - perlinThreshold);
                 }
 
                 perlin.y += perlinMove;
@@ -366,7 +377,17 @@ public class Ground : MonoBehaviour
 
                     case RockType.Hardrock:
                         colors[i] = Color.Lerp(dirtColor, hardrockColor,
-                            0.5f + (int)(densityMap[x][y] * 5) / 5f);
+                            0.7f + (int)(densityMap[x][y] * 3) / 3f);
+                        break;
+
+                    case RockType.Rock3:
+                        colors[i] = Color.Lerp(dirtColor, rock3Color,
+                            0.5f + (int)(densityMap[x][y] * 3) / 3f);
+                        break;
+
+                    case RockType.Rock4:
+                        colors[i] = Color.Lerp(rock4Color, Color.white,
+                            (int)(densityMap[x][y] * 3) / 3f * 0.7f);
                         break;
 
                     case RockType.None:
