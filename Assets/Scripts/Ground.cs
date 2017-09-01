@@ -113,7 +113,7 @@ public class Ground : MonoBehaviour
         Make(seed);
         initialized = true;
 
-        StartCoroutine(UpdateVisionRoutine());
+        //StartCoroutine(UpdateVisionRoutine());
     }
     /// <summary>
     /// Must be already initialized
@@ -414,14 +414,14 @@ public class Ground : MonoBehaviour
             dugData[i] = ValDugButHidden;
     }
 
-    private IEnumerator UpdateVisionRoutine()
-    {
-        while (true)
-        {
-            UpdateVision();
-            yield return new WaitForSeconds(0.1f);
-        }
-    }
+    //private IEnumerator UpdateVisionRoutine()
+    //{
+    //    while (true)
+    //    {
+    //        UpdateVision();
+    //        yield return new WaitForSeconds(0.1f);
+    //    }
+    //}
     private void UpdateVision()
     {
         // Reset fog data
