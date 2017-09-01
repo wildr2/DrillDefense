@@ -5,6 +5,9 @@ using UnityEngine.Networking;
 
 public class GameManager : MonoBehaviour
 {
+    private Ground ground;
+    public SeedManager seeder;
+
     public Player[] Players { get; private set; }
     public Player TopPlayer { get { return Players[0]; } }
     public Player BotPlayer { get { return Players[1]; } }
@@ -41,23 +44,28 @@ public class GameManager : MonoBehaviour
 
     private void Awake()
     {
+        ground = FindObjectOfType<Ground>();
+
         Players = new Player[2];
         IsPlaying = false;
+
+        // Gererate ground after synched random seed is known
+        seeder.onSeedSet += (int seed) => ground.Init(seed);
     }
     private void OnAllPlayersRegistered()
     {
         // Setup client perspective (player vision)
         if (TopPlayer.ai && BotPlayer.ai)
         {
-            TopPlayer.ClientPOV = true;
-            BotPlayer.ClientPOV = true;
+            ground.SetVisionPOV(TopPlayer);
+            ground.SetVisionPOV(BotPlayer);
         }
         else
         {
             LocalHuman = TopPlayer.IsLocalHuman() ? TopPlayer
             : BotPlayer.IsLocalHuman() ? BotPlayer : null;
 
-            if (LocalHuman != null) LocalHuman.ClientPOV = true;
+            if (LocalHuman != null) ground.SetVisionPOV(LocalHuman);
         }
 
         // Set Ready

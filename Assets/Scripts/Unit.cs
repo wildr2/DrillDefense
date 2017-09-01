@@ -17,10 +17,6 @@ public abstract class Unit : NetworkBehaviour
         Owner = owner;
 
         // Setup vision
-        if (owner.ClientPOV)
-        {
-            SetVisible(true);
-        }
         FindObjectOfType<Ground>().RegisterUnitWithVisionSys(this);
     }
     public virtual void SetVisible(bool visible = true)

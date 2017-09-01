@@ -19,7 +19,6 @@ public class Player : NetworkBehaviour
     public Color Color { get; private set; }
     public bool ai = false;
     public bool IsTop { get; private set; }
-    public bool ClientPOV { get; set; }
 
     public Vector2 Up { get { return IsTop ? Vector2.up : -Vector2.up; } }
     private List<Building> buildings = new List<Building>();
@@ -122,7 +121,7 @@ public class Player : NetworkBehaviour
             {
                 if (CanBuild(drillHousePrefab))
                 {
-                    BuildOnSurface(drillHousePrefab, Random.Range(0, ground.Width) - ground.Width / 2f);
+                    BuildOnSurface(drillHousePrefab, Random.Range(0, Ground.Width) - Ground.Width / 2f);
                 }
             }
             else if (r < 0.4f && buildings.Count > 0)

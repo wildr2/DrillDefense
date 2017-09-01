@@ -80,6 +80,6 @@ public class Drill : Unit
 
     public bool IsOutOfBounds()
     {
-        return Mathf.Abs(transform.position.y) > ground.Height * 0.7f;
+        return Mathf.Abs(transform.position.y) > Ground.Height * 0.7f;
     }
 }

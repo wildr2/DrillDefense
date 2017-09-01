@@ -6,7 +6,6 @@ public enum RockType { None, Any, Dirt, Grass, Gold, Hardrock }
 
 public class Ground : MonoBehaviour
 {
-    public SeedManager seeder;
     private bool initialized = false;
     public int NumRockTypes { get; private set; }
 
@@ -18,12 +17,12 @@ public class Ground : MonoBehaviour
     private Color clearColor = Color.clear;
 
     // Generation Parameters
+    public const float Width = 32; // world units
+    public const float Height = 25; // world units
     public const float Resolution = 15; // pixels per world unit
     private const float GrassHeight = 0.2f; // world units
 
     // Measurements
-    public float Width { get; private set; } // world units
-    public float Height { get; private set; } // world units
     private int pixelsWide, pixelsHigh; // ground units (pixels)
     private int grassPixels;
 
@@ -42,13 +41,13 @@ public class Ground : MonoBehaviour
 
     // Byte data value constants
     private const byte ValFog = 255;
-    private const byte ValNeverFog = 1;
     private const byte ValNoFog = 0;
     private const byte ValDug = 255;
     private const byte ValDugButHidden = 1;
     private const byte ValNotDug = 0;
 
     // Vision System
+    private List<Player> povPlayers = new List<Player>();
     private List<Unit> povUnits = new List<Unit>();
     private List<Unit> nonPovUnits = new List<Unit>();
 
@@ -103,54 +102,45 @@ public class Ground : MonoBehaviour
     {
         return GetRockTypeAtGPos(WorldToGroundPos(worldPos));
     }
-    /// <summary>
-    /// Return whether any non-transparent pixels in a sprite overlap ground in specified state
-    /// </summary>
-    /// <param name="tex"></param>
-    /// <returns></returns>
-    public bool SpriteOverlaps(SpriteRenderer sr, RockType state = RockType.Any)
-    {
-        // TODO: interpolate groundPos instead of worldPos to avoid calls to WorldToGroundPos
-
-        // Check if sprite bounds overlap ground bounds at all
-        if (!BoundsOverlap(sr.bounds))
-        {
-            return false;
-        }
-
-        // Check pixel by pixel
-        Vector2 pos = sr.transform.TransformPoint(sr.sprite.bounds.min); // world pos of current sprite pixel
-        Vector2 dx = sr.transform.TransformVector(new Vector2(1f / sr.sprite.pixelsPerUnit, 0));
-        Vector2 dy = sr.transform.TransformVector(new Vector2(0, 1f / sr.sprite.pixelsPerUnit));
-
-        for (int x = 0; x < sr.sprite.texture.width; ++x)
-        {
-            for (int y = 0; y < sr.sprite.texture.height; ++y)
-            {
-                if (sr.sprite.texture.GetPixel(x, y).a > 0)
-                {
-                    RockType rock = GetRockTypeAt(pos);
-                    if ((state == RockType.Any && rock != RockType.None) || rock == state)
-                    {
-                        return true;
-                    }
-                }
-                pos += dy;
-            }
-            pos -= dy * sr.sprite.texture.width;
-            pos += dx;
-        }
-
-        return false;
-    }
 
 
     // PUBLIC MODIFIERS
 
+    public void Init(int seed)
+    {
+        Make(seed);
+        initialized = true;
+
+        StartCoroutine(UpdateVisionRoutine());
+    }
+    /// <summary>
+    /// Must be already initialized
+    /// </summary>
+    /// <param name="player"></param>
+    public void SetVisionPOV(Player player)
+    {
+        povPlayers.Add(player);
+
+        // Remove fog from grassline
+        for (int x = 0; x < pixelsWide; ++x)
+        {
+            if (player.IsTop)
+            {
+                for (int y = (int)topHeightMap[x] - grassPixels; y < pixelsHigh; ++y)
+                    fogDataInitial[GroundPosToLinIndex(x, y)] = ValNoFog;
+            }
+            else
+            {
+                for (int y = (int)botHeightMap[x] + grassPixels; y >= 0; --y)
+                    fogDataInitial[GroundPosToLinIndex(x, y)] = ValNoFog;
+            }
+        }
+    }
     public void RegisterUnitWithVisionSys(Unit unit)
     {
-        if (unit.Owner.ClientPOV)
+        if (povPlayers.Contains(unit.Owner))
         {
+            unit.SetVisible();
             povUnits.Add(unit);
             unit.onDestroyed += (Unit u) => { povUnits.Remove(u); };
         }
@@ -159,60 +149,6 @@ public class Ground : MonoBehaviour
             nonPovUnits.Add(unit);
             unit.onDestroyed += (Unit u) => { nonPovUnits.Remove(u); };
         }
-    }
-
-    /// <summary>
-    /// Returns whether any ground was dug successfully
-    /// </summary>
-    /// <param name="sr"></param>
-    /// <returns></returns>
-    public bool DigWithSprite(SpriteRenderer sr, out Dictionary<RockType, int> digCount)
-    {
-        // TODO: interpolate groundPos instead of worldPos to avoid calls to WorldToGroundPos
-
-        digCount = new Dictionary<RockType, int>();
-        foreach (RockType rock in Tools.EnumValues(typeof(RockType)))
-        {
-            digCount[rock] = 0;
-        }
-
-
-        // Check if sprite bounds overlap ground bounds at all
-        if (!BoundsOverlap(sr.bounds))
-        {
-            return false;
-        }
-
-        //  Pixel by pixel
-        Vector2 pos = sr.transform.TransformPoint(sr.sprite.bounds.min); // world pos of current sprite pixel
-        Vector2 dx = sr.transform.TransformVector(new Vector2(1f / sr.sprite.pixelsPerUnit, 0));
-        Vector2 dy = sr.transform.TransformVector(new Vector2(0, 1f / sr.sprite.pixelsPerUnit));
-
-        bool dugAny = false;
-
-        for (int x = 0; x < sr.sprite.texture.width; ++x)
-        {
-            for (int y = 0; y < sr.sprite.texture.height; ++y)
-            {
-                if (sr.sprite.texture.GetPixel(x, y).a > 0)
-                {
-                    Vector2 groundPos = WorldToGroundPos(pos);
-                    RockType rock = GetRockTypeAtGPos(groundPos);
-                    digCount[rock] += 1;
-                    if (rock != RockType.None)
-                    {
-                        // Dig
-                        DigAt(groundPos);
-                        dugAny = true;
-                    }
-                }
-                pos += dy;
-            }
-            pos -= dy * sr.sprite.texture.width;
-            pos += dx;
-        }
-
-        return dugAny;
     }
     public int DigPolygon(PolygonCollider2D collider, out int[] rockCounts)
     {
@@ -249,13 +185,6 @@ public class Ground : MonoBehaviour
 
         return digCount;
     }
-    public void DrillLine(Vector2 p1, Vector2 p2, float Width)
-    {
-        int weight = Mathf.CeilToInt(Resolution * Width);
-
-        DrawLineWeighted(tex, WorldToGroundPos(p1), WorldToGroundPos(p2),
-            weight, clearColor);
-    }
 
 
     // PRIVATE MODIFIERS
@@ -263,45 +192,57 @@ public class Ground : MonoBehaviour
     private void Awake()
     {
         NumRockTypes = Tools.EnumLength(typeof(RockType));
-
-        // Determine width and height (world units)
-        Width = transform.localScale.x;
-        Height = transform.localScale.y;
-        transform.localScale = new Vector3(1, 1, 1);
-
-        // Gererate after synched random seed is known
-        seeder.onSeedSet += Make;
     }
     private void Make(int seed)
     {
         Random.InitState(seed);
-        MakeTerrain();
+        GenerateTerrain();
         MakeTextures();
-        MakeSprites();
-        initialized = true;
-
-        //StartCoroutine(UpdateVisionRoutine());
+        SetupRenderer();
     }
-    private void MakeTerrain()
+    private void GenerateTerrain()
     {
+        // Measurements
         pixelsWide = (int)(Resolution * Width);
         pixelsHigh = (int)(Resolution * Height);
         grassPixels = (int)(GrassHeight * Resolution);
+        int numPixels = pixelsWide * pixelsHigh;
 
-        CreateHeightMaps();
-
-        // Fill Data
+        // Init data
         data = new RockType[pixelsWide][];
         densityMap = new float[pixelsWide][];
+        fogDataInitial = new byte[numPixels];
+        fogData = new byte[numPixels];
+        dugData = new byte[numPixels];
 
-        Vector2 perlinGoldStart = new Vector2(Random.value, Random.value) * 1000f;
-        Vector2 perlinGold = perlinGoldStart;
-        float perlinGoldThreshold = 0.6f;
+        // Fill data
+        CreateHeightMaps();
+        FillSkyGrassDirt();
+        FillRocks(RockType.Hardrock, 0.6f, 0.02f);
+        FillRocks(RockType.Gold, 0.6f, 0.03f);
+        FillInitialFog();
+    }
+    private void CreateHeightMaps()
+    {
+        topHeightMap = new float[pixelsWide];
+        botHeightMap = new float[pixelsWide];
 
-        Vector2 perlinHardStart = new Vector2(Random.value, Random.value) * 1000f;
-        Vector2 perlinHard = perlinHardStart;
-        float perlinHardThreshold = 0.6f;
+        Vector2 perlinTop = new Vector2(Random.value, Random.value) * 1000f;
+        Vector2 perlinBot = new Vector2(Random.value, Random.value) * 1000f;
 
+        for (int x = 0; x < pixelsWide; ++x)
+        {
+            float offsetTop = Mathf.PerlinNoise(perlinTop.x, perlinTop.y) * 3f;
+            float offsetBot = Mathf.PerlinNoise(perlinBot.x, perlinBot.y) * 3f;
+            perlinTop.x += 0.013f;
+            perlinBot.x += 0.013f;
+
+            topHeightMap[x] = pixelsHigh - 1 - offsetTop * Resolution;
+            botHeightMap[x] = offsetBot * Resolution;
+        }
+    }
+    private void FillSkyGrassDirt()
+    {
         for (int x = 0; x < pixelsWide; ++x)
         {
             data[x] = new RockType[pixelsHigh];
@@ -310,7 +251,7 @@ public class Ground : MonoBehaviour
             int botGrassEnd = (int)botHeightMap[x] + grassPixels;
             int topGrassStart = (int)topHeightMap[x] - grassPixels;
 
-            // Clear Space
+            // Sky - clear
             for (int y = 0; y < botHeightMap[x]; ++y)
                 data[x][y] = RockType.None;
 
@@ -322,76 +263,77 @@ public class Ground : MonoBehaviour
                 data[x][y] = RockType.Grass;
 
             for (int y = topGrassStart; y < topHeightMap[x]; ++y)
-            {
-                try
-                {
-                    data[x][y] = RockType.Grass;
-                }
-                catch
-                {
-                    Tools.Log(x + " " + y + " " + topHeightMap[x]);
-                }
-            }
-                
+                data[x][y] = RockType.Grass;
 
-            // Dirt, Gold, Hardrock
+            // Dirt
             for (int y = botGrassEnd; y < topGrassStart; ++y)
-            {
-                if (Mathf.PerlinNoise(perlinHard.x, perlinHard.y) > perlinHardThreshold)
-                {
-                    data[x][y] = RockType.Hardrock; // hardrock
-                    densityMap[x][y] = (Mathf.PerlinNoise(perlinHard.x, perlinHard.y) - perlinHardThreshold)
-                        / perlinHardThreshold;
-                }   
-                else if (Mathf.PerlinNoise(perlinGold.x, perlinGold.y) > perlinGoldThreshold)
-                {
-                    data[x][y] = RockType.Gold; // gold
-                    densityMap[x][y] = (Mathf.PerlinNoise(perlinGold.x, perlinGold.y) - perlinGoldThreshold)
-                        / perlinGoldThreshold;
-                }
-                else
-                {
-                    data[x][y] = RockType.Dirt; // dirt
-                }    
-
-                perlinGold.y += 0.03f;
-                perlinHard.y += 0.02f;
-            }
-
-            perlinGold.x += 0.03f;
-            perlinGold.y = perlinGoldStart.y;
-            perlinHard.x += 0.02f;
-            perlinHard.y = perlinHardStart.y;
+                data[x][y] = RockType.Dirt;
         }
     }
-    private void CreateHeightMaps()
+    private void FillRocks(RockType rock, float perlinThreshold = 0.6f, float perlinMove = 0.03f)
     {
-        topHeightMap = new float[pixelsWide];
-        botHeightMap = new float[pixelsWide];
+        Vector2 perlinStart = new Vector2(Random.value, Random.value) * 1000f;
+        Vector2 perlin = perlinStart;
 
-        Vector2 perlinTop = new Vector2(Random.value, Random.value) * 1000f;
-        Vector2 perlinBot = new Vector2(Random.value, Random.value) * 1000f;
-
-        for (int i = 0; i < pixelsWide; ++i)
+        for (int x = 0; x < pixelsWide; ++x)
         {
-            float offsetTop = Mathf.PerlinNoise(perlinTop.x, perlinTop.y) * 3f; //(Mathf.Sin(t * Mathf.PI * 8f) + 1) * 0.3f;
-            float offsetBot = Mathf.PerlinNoise(perlinBot.x, perlinBot.y) * 3f; //(Mathf.Sin(t * Mathf.PI * 8f) + 1) * 0.3f;
-            perlinTop.x += 0.013f;
-            perlinBot.x += 0.013f;
+            int botGrassEnd = (int)botHeightMap[x] + grassPixels;
+            int topGrassStart = (int)topHeightMap[x] - grassPixels;
 
-            topHeightMap[i] = pixelsHigh - 1 - offsetTop * Resolution;
-            botHeightMap[i] = offsetBot * Resolution;
+            for (int y = botGrassEnd; y < topGrassStart; ++y)
+            {
+                float p = Mathf.PerlinNoise(perlin.x, perlin.y);
+                if (p > perlinThreshold)
+                {
+                    data[x][y] = rock;
+                    densityMap[x][y] = (p - perlinThreshold) / perlinThreshold;
+                }
+
+                perlin.y += perlinMove;
+            }
+
+            perlin.x += perlinMove;
+            perlin.y = perlinStart.y;
+        }
+    }
+    private void FillInitialFog()
+    {
+        for (int x = 0; x < pixelsWide; ++x)
+        {
+            int botGrassEnd = (int)botHeightMap[x] + grassPixels;
+            int topGrassStart = (int)topHeightMap[x] - grassPixels;
+
+            // Sky - clear
+            for (int y = 0; y < (int)botHeightMap[x]; ++y)
+                fogDataInitial[GroundPosToLinIndex(x, y)] = ValNoFog;
+
+            for (int y = (int)topHeightMap[x]; y < pixelsHigh; ++y)
+                fogDataInitial[GroundPosToLinIndex(x, y)] = ValNoFog;
+
+            // Everything else
+            for (int y = (int)botHeightMap[x]; y < topHeightMap[x]; ++y)
+                fogDataInitial[GroundPosToLinIndex(x, y)] = ValFog;
         }
     }
     private void MakeTextures()
     {
-        // Get data
-        int numPixels = pixelsWide * pixelsHigh;
-        Color[] colors = new Color[numPixels];
-        fogDataInitial = new byte[numPixels];
-        fogData = new byte[numPixels];
-        dugData = new byte[numPixels];
-        
+        // Ground
+        tex = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.SetPixels(ColorsFromData());
+        tex.Apply();
+
+        // Fog
+        texFogData = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.Alpha8, false);
+        texFogData.filterMode = FilterMode.Point;
+
+        // Dug
+        texDugData = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.Alpha8, false);
+        texDugData.filterMode = FilterMode.Point;
+    }
+    private Color[] ColorsFromData()
+    {
+        Color[] colors = new Color[pixelsWide * pixelsHigh];
 
         int i = 0;
         for (int y = 0; y < pixelsHigh; ++y)
@@ -399,38 +341,43 @@ public class Ground : MonoBehaviour
             for (int x = 0; x < pixelsWide; ++x)
             {
                 RockType rock = data[x][y];
-                colors[i] = rock == RockType.None ? clearColor :
-                            rock == RockType.Dirt ? dirtColor :
-                            rock == RockType.Gold ? Color.Lerp(dirtColor, goldColor, 0.5f + (int)(densityMap[x][y] * 5) / 5f) :
-                            rock == RockType.Grass ? grassColor :
-                            rock == RockType.Hardrock ? Color.Lerp(dirtColor, hardrockColor, 0.5f + (int)(densityMap[x][y] * 5) / 5f) 
-                            : Color.red;
+                switch (rock)
+                {
+                    case RockType.Dirt:
+                        colors[i] = dirtColor;
+                        break;
 
-                if (y > topHeightMap[x] - 1 - grassPixels || y < botHeightMap[x] - 1)
-                    fogDataInitial[i] = ValNeverFog;
-                else
-                    fogDataInitial[i] = ValFog;
+                    case RockType.Gold:
+                        colors[i] = Color.Lerp(dirtColor, goldColor,
+                            0.5f + (int)(densityMap[x][y] * 5) / 5f);
+                        break;
 
+                    case RockType.Hardrock:
+                        colors[i] = Color.Lerp(dirtColor, hardrockColor,
+                            0.5f + (int)(densityMap[x][y] * 5) / 5f);
+                        break;
+
+                    case RockType.None:
+                        colors[i] = clearColor;
+                        break;
+
+                    case RockType.Grass:
+                        colors[i] = grassColor;
+                        break;
+                }
                 ++i;
             }
         }
 
-        // Create Texture2Ds
-        tex = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
-        tex.filterMode = FilterMode.Point;
-        tex.SetPixels(colors);
-        tex.Apply();
-        texFogData = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.Alpha8, false);
-        texFogData.filterMode = FilterMode.Point;
-        texDugData = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.Alpha8, false);
-        texDugData.filterMode = FilterMode.Point;
+        return colors;
     }
-    private void MakeSprites()
+    private void SetupRenderer()
     {
         spriteR.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), Resolution);
         spriteR.material.SetTexture("_FogTex", texFogData);
         spriteR.material.SetTexture("_DugTex", texDugData);
     }
+
 
     private void LateUpdate()
     {
@@ -563,6 +510,7 @@ public class Ground : MonoBehaviour
         pos.y = ((pos.y / Height) + 0.5f) * pixelsHigh;
         return pos;
     }
+
     private RockType GetRockTypeAtGPos(Vector2 groundPos)
     {
         return GetRockTypeAtGPos((int)groundPos.x, (int)groundPos.y);
@@ -576,6 +524,7 @@ public class Ground : MonoBehaviour
         }
         return data[groundX][groundY];
     }
+
     private bool InBounds(Vector2 groundPos)
     {
         return InBounds((int)groundPos.x, (int)groundPos.y);
@@ -597,54 +546,6 @@ public class Ground : MonoBehaviour
 
 
     // STATIC HELPERS
-
-    /// <summary>
-    /// http://answers.unity3d.com/questions/244417/create-line-on-a-texture.html
-    /// </summary>
-    /// <param name="tex"></param>
-    /// <param name="p1"></param>
-    /// <param name="p2"></param>
-    /// <param name="col"></param>
-    private static void DrawLine(Texture2D tex, Vector2 p1, Vector2 p2, Color col)
-    {
-        Vector2 t = p1;
-        float frac = 1 / Mathf.Sqrt(Mathf.Pow(p2.x - p1.x, 2) + Mathf.Pow(p2.y - p1.y, 2));
-        float ctr = 0;
-
-        while ((int)t.x != (int)p2.x || (int)t.y != (int)p2.y)
-        {
-            t = Vector2.Lerp(p1, p2, ctr);
-            ctr += frac;
-            int x = (int)t.x;
-            int y = (int)t.y;
-            if (x > -1 && x < tex.width && y > -1 && y < tex.height)
-            {
-                tex.SetPixel(x, y, col);
-            }
-        }
-    }
-    private static void DrawLineWeighted(Texture2D tex, Vector2 p1, Vector2 p2, int w, Color col)
-    {
-        int leftW = Mathf.FloorToInt(w / 2f);
-        int rightW = Mathf.CeilToInt(w / 2f);
-
-        Vector2 normal = Vector3.Cross(p2 - p1, Vector3.forward).normalized;
-        for (int x = -leftW; x < rightW; ++x)
-        {
-            DrawLine(tex, p1 + normal * x, p2 + normal * x, col);
-        }
-    }
-    private static void FillTexture(Texture2D tex, Color color)
-    {
-        Color32[] colors = tex.GetPixels32();
-
-        for (int i = 0; i < colors.Length; i++)
-        {
-            colors[i] = color;
-        }
-
-        tex.SetPixels32(colors);
-    }
 
     private static bool SameSideOfLine(Vector2 p1, Vector2 p2, Vector2 a, Vector2 b)
     {
