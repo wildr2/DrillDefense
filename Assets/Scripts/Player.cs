@@ -158,9 +158,9 @@ public class Player : NetworkBehaviour
     {
         buildings.Remove(b);
     }
-    private void OnDrillDig(Dictionary<RockType, int> digCount)
+    private void OnDrillDig(int[] rockCounts)
     {
-        gold += digCount[RockType.Gold] / 10f;
+        gold += rockCounts[(int)RockType.Gold] / 10f;
     }
 
     private void SetAimLine(Vector2 p1, Vector2 p2)

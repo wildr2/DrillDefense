@@ -322,8 +322,17 @@ public class Ground : MonoBehaviour
                 data[x][y] = RockType.Grass;
 
             for (int y = topGrassStart; y < topHeightMap[x]; ++y)
-                data[x][y] = RockType.Grass;
-
+            {
+                try
+                {
+                    data[x][y] = RockType.Grass;
+                }
+                catch
+                {
+                    Tools.Log(x + " " + y + " " + topHeightMap[x]);
+                }
+            }
+                
 
             // Dirt, Gold, Hardrock
             for (int y = botGrassEnd; y < topGrassStart; ++y)
@@ -440,7 +449,7 @@ public class Ground : MonoBehaviour
         data[x][y] = RockType.None;
 
         int i = GroundPosToLinIndex(x, y);
-        if (VisionAt(x, y))
+        if (VisionAt(i))
             dugData[i] = ValDug;
         else
             dugData[i] = ValDugButHidden;
@@ -475,7 +484,7 @@ public class Ground : MonoBehaviour
         {
             Unit unit = nonPovUnits[i];
             Vector2 pos = WorldToGroundPos(unit.transform.position);
-            if (InBounds(pos) && VisionAt(pos))
+            if (InBounds(pos) && VisionAt(GroundPosToLinIndex(pos)))
             {
                 unit.SetVisible(true);
                 if (unit.GetComponent<Building>() != null)
@@ -528,13 +537,9 @@ public class Ground : MonoBehaviour
 
     // PRIVATE ACCESSORS
     
-    private bool VisionAt(Vector2 groundPos)
+    private bool VisionAt(int groundLinIndex)
     {
-        return VisionAt((int)groundPos.x, (int)groundPos.y);
-    }
-    private bool VisionAt(int groundX, int groundY)
-    {
-        return fogData[GroundPosToLinIndex(groundX, groundY)] < 10;
+        return fogData[groundLinIndex] < 10;
     }
 
     private int GroundPosToLinIndex(Vector2 groundPos)
@@ -645,4 +650,20 @@ public class Ground : MonoBehaviour
         return SameSideOfLine(p, a, b, c) && SameSideOfLine(p, b, a, c) &&
             SameSideOfLine(p, c, a, b);
     }
+}
+
+
+public class Rock
+{
+    public const short None = 0;
+    public const short Any = 1;
+    public const short Dirt = 2;
+    public const short Grass = 3;
+    public const short Gold = 4;
+    public const short Hard = 5;
+    public const int N = 6;
+
+    public short value = None;
+
+
 }

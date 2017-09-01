@@ -13,7 +13,8 @@ public class Drill : Unit
     new private PolygonCollider2D collider;
     private Ground ground;
 
-    public System.Action<Dictionary<RockType, int>> onDig;
+    // args: rockCounts 
+    public System.Action<int[]> onDig;
  
 
     public override void Init(Player owner)
@@ -32,27 +33,18 @@ public class Drill : Unit
         base.Awake();
         ground = FindObjectOfType<Ground>();
         collider = GetComponent<PolygonCollider2D>();
-        //rb = GetComponent<Rigidbody2D>();
     }
     private void Update()
     {
         // Dig
         int[] rockCounts;
-
-        //Vector2 a = (Vector2)transform.position - (Vector2)transform.up * 1;
-        //Vector2 b = (Vector2)transform.position - (Vector2)transform.right * 0.5f;
-        //Vector2 c = (Vector2)transform.position + (Vector2)transform.right * 0.5f;
-
-        int dugCount = ground.DigPolygon(collider, out rockCounts);
-
-        if (dugCount > 0)
+        if (ground.DigPolygon(collider, out rockCounts) > 0)
         {
-            health -= 1;
             // Decrease Health
-            //health -= digCount[RockType.Gold] / 10f;
-            //health -= digCount[RockType.Hardrock] / 2f;
+            health -= rockCounts[(int)RockType.Gold] / 10f;
+            health -= rockCounts[(int)RockType.Hardrock] / 2f;
 
-            //if (onDig != null) onDig(digCount);
+            if (onDig != null) onDig(rockCounts);
         }
 
         // Move
