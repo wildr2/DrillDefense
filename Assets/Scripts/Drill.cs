@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -6,6 +7,8 @@ using UnityEngine.Networking;
 public class Drill : Unit
 {
     public override float VisionRadius { get { return 2; } }
+    public override float KillGold { get { return 0; } }
+
     private float health = 1;
     private float speed = 1; // units per second
 
@@ -63,19 +66,18 @@ public class Drill : Unit
         Drill drill = collision.collider.GetComponent<Drill>();
         if (drill != null)
         {
-            if (!isClient) OnCollideDrill();
-            RpcOnCollideDrill();
+            RpcOnCollideDrill(drill.netId);
         }
     }
 
     [ClientRpc]
-    private void RpcOnCollideDrill()
+    private void RpcOnCollideDrill(NetworkInstanceId drillNetId)
     {
-        OnCollideDrill();
+        OnCollideDrill(ClientScene.FindLocalObject(drillNetId).GetComponent<Drill>());
     }
-    private void OnCollideDrill()
+    private void OnCollideDrill(Drill drill)
     {
-        Destroy(gameObject);
+        Kill(drill.Owner);
     }
 
     public bool IsOutOfBounds()

@@ -7,6 +7,7 @@ public abstract class Unit : NetworkBehaviour
 {
     public Player Owner { get; private set; }
     public abstract float VisionRadius { get; }
+    public abstract float KillGold { get; }
     public Transform graphics;
 
     public System.Action<Unit> onDestroyed;
@@ -23,6 +24,12 @@ public abstract class Unit : NetworkBehaviour
     {
         if (graphics.gameObject.activeInHierarchy != visible)
             graphics.gameObject.SetActive(visible);
+    }
+
+    protected void Kill(Player killer)
+    {
+        killer.gold += KillGold;
+        Destroy(gameObject);
     }
 
     protected virtual void Awake()

@@ -227,9 +227,9 @@ public class Ground : MonoBehaviour
         // Fill data
         CreateHeightMaps(0.2f);
         FillSkyGrassDirt();
-        FillRocks(RockType.Rock4, 0.6f, 0.4f, 0.5f, 1f);
-        FillRocks(RockType.Gold, 0.55f, 0.35f, 0.25f, 1f);
-        FillRocks(RockType.Rock3, 0.7f, 0.5f, 0.5f, 0.5f);
+        FillRocks(RockType.Rock3, 0.6f, 0.4f, 0.5f, 1f);
+        FillRocks(RockType.Gold, 0.55f, 0.35f, 0.15f, 1f);
+        FillRocks(RockType.Rock4, 0.7f, 0.5f, 0.5f, 0.5f);
         FillRocks(RockType.Hardrock, 0.55f, 0.25f, 0f, 1f);
         
         FillInitialFog();

@@ -13,15 +13,18 @@ public class Player : NetworkBehaviour
     private LineRenderer aimLine;
 
     [SyncVar] public short id;
-    [SyncVar] private float gold; // TODO: make short and divide / round when retrieving?
+    [SyncVar] public float gold;
 
-    private const int startGold = 100;
-    private const int goldPerSecond = 1;
-
+    // General
     public Color Color { get; private set; }
     public bool ai = false;
     public bool IsTop { get; private set; }
     public Vector2 Up { get { return IsTop ? Vector2.up : -Vector2.up; } }
+
+    // Gold
+    private const int startGold = 100;
+    private const int goldPerSecond = 1;
+    private const int goldValue = 20; // per unit square of rock
 
     // Construction
     private List<Building> buildings = new List<Building>();
@@ -161,7 +164,7 @@ public class Player : NetworkBehaviour
     }
     private void OnDrillDig(int[] rockCounts)
     {
-        gold += rockCounts[(int)RockType.Gold] * Ground.RockValue * 30;
+        gold += rockCounts[(int)RockType.Gold] * Ground.RockValue * goldValue;
     }
 
     private void SetAimLine(Vector2 p1, Vector2 p2)
