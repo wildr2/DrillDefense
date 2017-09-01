@@ -397,7 +397,7 @@ public class Ground : MonoBehaviour
                             rock == RockType.Hardrock ? Color.Lerp(dirtColor, hardrockColor, 0.5f + (int)(densityMap[x][y] * 5) / 5f) 
                             : Color.red;
 
-                if (y > topHeightMap[x] - grassPixels || y < botHeightMap[x] - 2)
+                if (y > topHeightMap[x] - 1 - grassPixels || y < botHeightMap[x] - 1)
                     fogDataInitial[i] = ValNeverFog;
                 else
                     fogDataInitial[i] = ValFog;
@@ -412,7 +412,9 @@ public class Ground : MonoBehaviour
         tex.SetPixels(colors);
         tex.Apply();
         texFogData = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.Alpha8, false);
+        texFogData.filterMode = FilterMode.Point;
         texDugData = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.Alpha8, false);
+        texDugData.filterMode = FilterMode.Point;
     }
     private void MakeSprites()
     {
