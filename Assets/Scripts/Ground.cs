@@ -21,7 +21,7 @@ public class Ground : MonoBehaviour
     // Generation Parameters
     public const float Width = 32; // world units
     public const float Height = 35; // world units
-    public const float Resolution = 15; // pixels per world unit
+    public const float Resolution = 35; // pixels per world unit
     private const float GrassHeight = 0.2f; // world units
 
     // Measurements
@@ -32,6 +32,8 @@ public class Ground : MonoBehaviour
 
     // Rendering
     public SpriteRenderer spriteR;
+    public Camera fogCam, dugCam;
+    private RenderTexture fogRTex, dugRTex;
     private Texture2D tex, texFogData, texDugData;
 
     // Data
@@ -227,9 +229,9 @@ public class Ground : MonoBehaviour
         // Fill data
         CreateHeightMaps(0.2f);
         FillSkyGrassDirt();
-        FillRocks(RockType.Rock3, 0.6f, 0.4f, 0.5f, 1f);
+        FillRocks(RockType.Rock3, 0.65f, 0.4f, 0.5f, 1f);
+        FillRocks(RockType.Rock4, 0.75f, 0.5f, 0.5f, 0.5f);
         FillRocks(RockType.Gold, 0.55f, 0.35f, 0.15f, 1f);
-        FillRocks(RockType.Rock4, 0.7f, 0.5f, 0.5f, 0.5f);
         FillRocks(RockType.Hardrock, 0.55f, 0.25f, 0f, 1f);
         
         FillInitialFog();
@@ -323,9 +325,6 @@ public class Ground : MonoBehaviour
     {
         for (int x = 0; x < pixelsWide; ++x)
         {
-            int botGrassStart = (int)botHeightMap[x] + grassPixels;
-            int topGrassStart = (int)topHeightMap[x] - grassPixels;
-
             // Sky - clear
             for (int y = 0; y <= (int)botHeightMap[x]; ++y)
                 fogDataInitial[GroundPosToLinIndex(x, y)] = ValNoFog;
@@ -406,9 +405,28 @@ public class Ground : MonoBehaviour
     }
     private void SetupRenderer()
     {
+        //testRTex = new RenderTexture(pixelsWide, pixelsHigh, 0);
+        //Material mat = new Material(Shader.Find("Custom/Circle"));
+
+        //mat.SetFloat("_Radius", 3f / Resolution);
+        //mat.SetVector("_Pos", new Vector2(0.5f, 0.5f));
+        //Texture2D blank = new Texture2D(0, 0);
+        //Graphics.Blit(blank, testRTex, mat);
+
+        //mat.SetFloat("_Radius", 2f / Resolution);
+        //mat.SetVector("_Pos", new Vector2(0.7f, 0.5f));
+        //Graphics.Blit(testRTex, testRTex, mat);
+
+        fogRTex = new RenderTexture(Camera.main.pixelWidth, Camera.main.pixelHeight, 0);
+        dugRTex = new RenderTexture(pixelsWide, pixelsHigh, 0);
+        fogCam.targetTexture = fogRTex;
+        dugCam.targetTexture = dugRTex;
+        dugCam.orthographicSize = Height / 2f;
+        dugCam.aspect = Width / Height;
+
         spriteR.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), Resolution);
-        spriteR.material.SetTexture("_FogTex", texFogData);
-        spriteR.material.SetTexture("_DugTex", texDugData);
+        spriteR.material.SetTexture("_FogTex", fogRTex);
+        spriteR.material.SetTexture("_DugTex", dugRTex);
     }
 
 

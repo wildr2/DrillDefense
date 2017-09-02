@@ -7,14 +7,9 @@ Shader "Sprites/Ground"
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
 		_FogTex ("Fog Texture", 2D) = "white" {}
 		_DugTex("Dug Texture", 2D) = "white" {}
-		_Color ("Tint", Color) = (1,1,1,1)
 		_FogColor("Fog Tint", Color) = (1,1,1,1)
 		_DugColor("Dug Tint", Color) = (1,1,1,1)
-        [MaterialToggle] PixelSnap ("Pixel snap", Float) = 0
         [HideInInspector] _RendererColor ("RendererColor", Color) = (1,1,1,1)
-        [HideInInspector] _Flip ("Flip", Vector) = (1,1,1,1)
-        [PerRendererData] _AlphaTex ("External Alpha", 2D) = "white" {}
-        [PerRendererData] _EnableExternalAlpha ("Enable External Alpha", Float) = 0
     }
 
     SubShader
@@ -25,7 +20,6 @@ Shader "Sprites/Ground"
             "IgnoreProjector"="True"
             "RenderType"="Transparent"
             "PreviewType"="Plane"
-            "CanUseSpriteAtlas"="True"
         }
 
         Cull Off
@@ -36,32 +30,50 @@ Shader "Sprites/Ground"
         Pass
         {
 			CGPROGRAM
-            #pragma vertex SpriteVert
+            #pragma vertex vert
             #pragma fragment frag
-            #pragma target 2.0
-            #pragma multi_compile_instancing
-            #pragma multi_compile _ PIXELSNAP_ON
-            #pragma multi_compile _ ETC1_EXTERNAL_ALPHA
-            #include "UnitySprites.cginc"
+			#include "UnityCG.cginc"
+			
+			sampler2D _MainTex;
 			sampler2D _FogTex;
 			sampler2D _DugTex;
 			fixed4 _FogColor;
 			fixed4 _DugColor;
+			fixed4 _RendererColor;
+
+			struct v2f
+			{
+				float4 vertex : SV_POSITION;
+				float2 texcoord : TEXCOORD0;
+				float4 scrPos : TEXCOORD1;
+			};
+
+			v2f vert(appdata_base IN)
+			{
+				v2f o;
+
+				o.vertex = UnityObjectToClipPos(IN.vertex);
+				o.texcoord = IN.texcoord;
+				o.scrPos = ComputeScreenPos(o.vertex);
+
+				return o;
+			}
 
 			fixed4 frag(v2f IN) : SV_Target
 			{				
-				fixed4 c = SampleSpriteTexture(IN.texcoord) * IN.color;
+				fixed4 c = tex2D(_MainTex, IN.texcoord) * _RendererColor;
 				fixed4 dug = tex2D(_DugTex, IN.texcoord);
-				fixed4 fog = tex2D(_FogTex, IN.texcoord);
-				
+				fixed4 fog = tex2D(_FogTex, IN.scrPos.xy);
+
 				if (dug.a == 1)
 				{
 					c.rgb = lerp(c.rgb, _DugColor, _DugColor.a);
 				}
-				if (fog.a == 1)
+				if (fog.a == 0 && c.a > 0)
 				{
 					c.rgb = lerp(c.rgb, _FogColor, _FogColor.a);
 				}
+
 				return c;
 			}
 			ENDCG
