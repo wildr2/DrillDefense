@@ -180,13 +180,6 @@ public class Ground : MonoBehaviour
         return digCount;
     }
 
-    public void GraphicsTest()
-    {
-        if (!initialized) return; 
-        Graphics.Blit(dugRT, newDugRT, fowMat, -1);
-        Graphics.CopyTexture(newDugRT, dugRT);
-    }
-
 
     // PRIVATE MODIFIERS
 
@@ -367,6 +360,7 @@ public class Ground : MonoBehaviour
     private void SetupRenderer()
     {
         dugRT = new RenderTexture(pixelsWide, pixelsHigh, 0);
+        dugRT.Create();
         newDugRT = new RenderTexture(pixelsWide, pixelsHigh, 0);
         dugCam.targetTexture = dugRT;
         dugCam.orthographicSize = Height / 2f;
@@ -389,12 +383,12 @@ public class Ground : MonoBehaviour
     {
         if (!initialized) return;
         UpdateVision();
+        UpdateDugTexture();
     }
-    private void OnRenderObject()
+    private void UpdateDugTexture()
     {
-        if (!initialized) return;
-
-       
+        Graphics.Blit(dugRT, newDugRT, fowMat, -1);
+        Graphics.CopyTexture(newDugRT, dugRT);
     }
 
     private void DigAt(Vector2 groundPos)
