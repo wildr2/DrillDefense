@@ -21,7 +21,7 @@ public class Ground : MonoBehaviour
     // Generation Parameters
     public const float Width = 32; // world units
     public const float Height = 35; // world units
-    public const int Resolution = 35; // pixels per world unit
+    public const int Resolution = 50; // pixels per world unit
     private const int CollectResolution = 5; // squares per world unit
     private const float GrassHeight = 0.2f; // world units
 
@@ -198,9 +198,9 @@ public class Ground : MonoBehaviour
         // Fill Rocks
         CreateHeightMaps(0.2f);
         FillSkyGrassDirt();
-        //FillRocks(RockType.Rock3, 0.65f, 0.4f, 0.5f, 1f);
-        //FillRocks(RockType.Rock4, 0.75f, 0.5f, 0.5f, 0.5f);
-        FillRocks(RockType.Gold, 0.55f, 0.35f, 0.15f, 1f);
+        FillRocks(RockType.Rock3, 0.65f, 0.4f, 0.5f, 1f);
+        FillRocks(RockType.Rock4, 0.75f, 0.5f, 0.5f, 0.5f);
+        //FillRocks(RockType.Gold, 0.55f, 0.35f, 0.15f, 1f);
         //FillRocks(RockType.Hardrock, 0.55f, 0.25f, 0f, 1f);
 
         // Create lower resolution rock grid

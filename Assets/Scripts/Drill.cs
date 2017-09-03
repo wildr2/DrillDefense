@@ -6,7 +6,6 @@ using UnityEngine.Networking;
 
 public class Drill : Unit
 {
-    public override float VisionRadius { get { return 2; } }
     public override float KillGold { get { return 0; } }
 
     private float health = 1;

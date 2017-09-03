@@ -68,7 +68,7 @@ Shader "Custom/Ground"
 				if (notSky)
 				{
 					bool isKnownDug = dug.g == 1;
-					bool isDug = dug.g > 0;
+					bool isDug = dug.r > 0;
 					bool hasVision = vision.r > 0;
 
 					// Dug tint

@@ -6,7 +6,7 @@ using UnityEngine.Networking;
 public abstract class Unit : NetworkBehaviour
 {
     public Player Owner { get; private set; }
-    public abstract float VisionRadius { get; }
+    public float VisionRadius { get; private set; }
     public abstract float KillGold { get; }
 
     public Transform graphics;
@@ -19,6 +19,7 @@ public abstract class Unit : NetworkBehaviour
     {
         Owner = owner;
         visionArea.gameObject.SetActive(false);
+        VisionRadius = visionArea.transform.localScale.x / 2f;
 
         // Setup vision
         FindObjectOfType<Ground>().RegisterUnitWithVisionSys(this);

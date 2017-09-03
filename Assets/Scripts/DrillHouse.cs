@@ -8,7 +8,6 @@ public class DrillHouse : Building
 {
     public override int Cost { get { return 50; } }
     public override float KillGold { get { return 50; } }
-    public override float VisionRadius { get { return 3; } }
     public const int DrillCost = 10;
 
     public Drill drillPrefab;
