@@ -58,6 +58,8 @@ public class Ground : MonoBehaviour
     private List<Player> povPlayers = new List<Player>();
     private List<Unit> povUnits = new List<Unit>();
     private List<Unit> nonPovUnits = new List<Unit>();
+    private bool topSurfaceVision = false;
+    private bool botSurfaceVision = false;
 
 
     // PUBLIC ACCESSORS
@@ -127,6 +129,8 @@ public class Ground : MonoBehaviour
     public void SetVisionPOV(Player player)
     {
         povPlayers.Add(player);
+        if (player.IsTop) topSurfaceVision = true;
+        else botSurfaceVision = true;
     }
     public void RegisterUnitWithVisionSys(Unit unit)
     {
@@ -430,12 +434,31 @@ public class Ground : MonoBehaviour
     
     private bool ClientCanSee(Unit unit)
     {
+        // Visible if in vision range of friendly unit
         foreach (Unit povUnit in povUnits)
         {
             float dist = Vector2.Distance(unit.transform.position, povUnit.transform.position);
             if (dist < povUnit.VisionRadius)
                 return true;
         }
+
+        // Surface (grassline and above) vision
+        Vector2 groundPos = WorldToGroundPos(unit.transform.position);
+        int gx = (int)groundPos.x;
+        if (gx >= 0 && gx < pixelsWide)
+        {
+            if (topSurfaceVision)
+            {
+                if (groundPos.y > topHeightMap[gx] - grassPixels)
+                    return true;
+            }
+            if (botSurfaceVision)
+            {
+                if (groundPos.y < topHeightMap[gx] + grassPixels)
+                    return true;
+            }
+        }
+        
         return false;
     }
      
