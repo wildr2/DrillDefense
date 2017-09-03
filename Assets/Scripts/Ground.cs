@@ -11,7 +11,8 @@ public class Ground : MonoBehaviour
 
     // Colors
     public Color dirtColor = Color.black;
-    public Color grassColor = Color.green;
+    public Color topGrassColor = Color.black;
+    public Color botGrassColor = Color.black;
     public Color goldColor = Color.yellow;
     public Color hardrockColor = Color.black;
     public Color rock3Color = Color.black;
@@ -121,15 +122,15 @@ public class Ground : MonoBehaviour
 
         //StartCoroutine(UpdateVisionRoutine());
     }
-    /// <summary>
-    /// Must be already initialized
-    /// </summary>
-    /// <param name="player"></param>
     public void SetVisionPOV(Player player)
     {
         povPlayers.Add(player);
-        if (player.IsTop) topSurfaceVision = true;
-        else botSurfaceVision = true;
+        if (player.IsTop)
+            topSurfaceVision = true;
+        else
+            botSurfaceVision = true;
+
+        GiveGrasslineVision(player.IsTop);
     }
     public void RegisterUnitWithVisionSys(Unit unit)
     {
@@ -368,7 +369,7 @@ public class Ground : MonoBehaviour
                         break;
 
                     case RockType.Grass:
-                        colors[i] = grassColor;
+                        colors[i] = y > pixelsHigh / 2 ? topGrassColor : botGrassColor;
                         break;
                 }
                 ++i;
@@ -432,6 +433,30 @@ public class Ground : MonoBehaviour
     {
         Graphics.Blit(dugRT, newDugRT, fowMat, -1);
         Graphics.CopyTexture(newDugRT, dugRT);
+    }
+
+    private void GiveGrasslineVision(bool top)
+    {
+        for (int x = 0; x < pixelsWide; ++x)
+        {
+            if (top)
+            {
+                Color c = topGrassColor;
+                c.a = 0.5f;
+                int topGrassStart = (int)topHeightMap[x] - grassPixels;
+                for (int y = topGrassStart; y < (int)topHeightMap[x]; ++y)
+                    tex.SetPixel(x, y, c);
+            }
+            else
+            {
+                Color c = botGrassColor;
+                c.a = 0.5f;
+                int botGrassStart = (int)botHeightMap[x] + grassPixels;
+                for (int y = botGrassStart; y > (int)botHeightMap[x]; --y)
+                    tex.SetPixel(x, y, c);
+            }
+        }
+        tex.Apply();
     }
 
 

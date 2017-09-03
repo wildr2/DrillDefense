@@ -69,7 +69,7 @@ Shader "Custom/Ground"
 				{
 					bool isKnownDug = dug.g == 1;
 					bool isDug = dug.r > 0;
-					bool hasVision = vision.r > 0;
+					bool hasVision = vision.r > 0 || c.a < 1;
 
 					// Dug tint
 					if (isKnownDug || (isDug && hasVision))
@@ -82,8 +82,10 @@ Shader "Custom/Ground"
 					{
 						c.rgb = lerp(c.rgb, _FogColor, _FogColor.a);
 					}
-				}
 
+					c.a = 1;
+				}
+				
 				return c;
 			}
 			ENDCG
