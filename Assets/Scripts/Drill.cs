@@ -12,7 +12,6 @@ public class Drill : Unit
     private float health = 1;
     private float speed = 1; // units per second
 
-    public SpriteRenderer colliderSprite;
     new private PolygonCollider2D collider;
     private Ground ground;
 
@@ -41,14 +40,15 @@ public class Drill : Unit
     {
         // Dig
         int[] rockCounts;
-        if (ground.DigPolygon(collider, out rockCounts) > 0)
-        {
-            // Decrease Health
-            health -= rockCounts[(int)RockType.Gold] * Ground.RockValue * 0.5f;
-            health -= rockCounts[(int)RockType.Hardrock] * Ground.RockValue * 3f;
+        Vector3 center = transform.position + transform.up * 0.5f;
+        ground.CollectRocks(center, 1, out rockCounts);
 
-            if (onDig != null) onDig(rockCounts);
-        }
+        // Decrease Health
+        health -= rockCounts[(int)RockType.Gold] * Ground.RockValue * 0.5f;
+        health -= rockCounts[(int)RockType.Hardrock] * Ground.RockValue * 3f;
+
+        if (onDig != null) onDig(rockCounts);
+        
 
         // Move
         transform.position -= transform.up * speed * Time.deltaTime;

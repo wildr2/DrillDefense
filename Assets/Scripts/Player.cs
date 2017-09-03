@@ -198,7 +198,7 @@ public class Player : NetworkBehaviour
                 // Set template pos / ori near locked drill
                 Vector2 drillPos = nearbyDrill.transform.position;
                 template.up = drillPos - mouse;
-                template.position = drillPos + (Vector2)template.up * 1;
+                template.position = drillPos + (Vector2)template.up * 1.25f;
             }
             else
             {

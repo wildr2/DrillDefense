@@ -21,14 +21,16 @@ public class Ground : MonoBehaviour
     // Generation Parameters
     public const float Width = 32; // world units
     public const float Height = 35; // world units
-    public const float Resolution = 35; // pixels per world unit
+    public const int Resolution = 35; // pixels per world unit
+    private const int CollectResolution = 5; // squares per world unit
     private const float GrassHeight = 0.2f; // world units
 
     // Measurements
     private int pixelsWide, pixelsHigh; // ground units (pixels)
+    private int cRocksWide, cRocksHigh; // ground units (pixels)
     private int grassPixels;
     // resolution independent value per rock (pixel)
-    public static float RockValue = 1f / (Resolution * Resolution); 
+    public static float RockValue = 1f / (CollectResolution * CollectResolution); 
 
     // Rendering
     public SpriteRenderer spriteR;
@@ -39,15 +41,16 @@ public class Ground : MonoBehaviour
     private Material fowMat;
 
     // Data
-    private RockType[][] data; // rock type for each pixel ([x][y] ground units)
     /// <summary>
     /// ideal (fractional) number of pixels (of tex) high (from bottom of image) for each pixel along horizontal
     /// - cast to int for exact exclusive height
     /// </summary>
     private float[] topHeightMap, botHeightMap;
     private float[][] densityMap;
+    private RockType[][] pixelRocks; // rock type for each pixel ([x][y] ground units)
+    private RockType[][] collectRocks;
 
-    // Byte data value constants
+    // Byte pixelRocks value constants
     private const byte ValFog = 255;
     private const byte ValNoFog = 0;
     private const byte ValDug = 255;
@@ -107,10 +110,6 @@ public class Ground : MonoBehaviour
         Vector2 n = Vector3.Cross(Vector3.forward, tangent).normalized;
         return top ? n : -n;
     }
-    public RockType GetRockTypeAt(Vector2 worldPos)
-    {
-        return GetRockTypeAtGPos(WorldToGroundPos(worldPos));
-    }
 
 
     // PUBLIC MODIFIERS
@@ -147,41 +146,26 @@ public class Ground : MonoBehaviour
             unit.onDestroyed += (Unit u) => { nonPovUnits.Remove(u); };
         }
     }
-    public int DigPolygon(PolygonCollider2D collider, out int[] rockCounts)
+    public void CollectRocks(Vector2 center, int radius, out int[] rockCounts)
     {
         rockCounts = new int[NumRockTypes];
-        int digCount = 0;
 
-        Bounds bounds = collider.bounds;
-        Vector2 minGPos = ClampToBounds(WorldToGroundPos(bounds.min));
-        Vector2 maxGPos = ClampToBounds(WorldToGroundPos(bounds.max));
+        IVector2 c = WorldToCollectPos(center);
+        int r = radius;
 
-        Vector2 center = bounds.center;
-        Vector2 wp = bounds.min;
-        float deltaWp = 1f / Resolution;
-        float wy0 = wp.y;
-
-        for (int x = (int)minGPos.x; x <= (int)maxGPos.x; ++x)
+        for (int x = Mathf.Max(0, c.x - r); x <= Mathf.Min(c.x + r, cRocksWide-1); ++x)
         {
-            for (int y = (int)minGPos.y; y <= (int)maxGPos.y; ++y)
+            for (int y = Mathf.Max(0, c.y - r); y <= Mathf.Min(c.y + r, cRocksHigh-1); ++y)
             {
-                if (collider.OverlapPoint(wp))
+                bool inCircle = MHDistance(x, y, c.x, c.y) <= r;
+                if (inCircle)
                 {
-                    RockType rock = data[x][y];
+                    RockType rock = collectRocks[x][y];
                     rockCounts[(int)rock] += 1;
-                    if (rock != RockType.None)
-                    {
-                        DigAt(x, y);
-                        ++digCount;
-                    }   
+                    collectRocks[x][y] = RockType.None;
                 }
-                wp.y += deltaWp;
             }
-            wp.x += deltaWp;
-            wp.y = wy0;
         }
-
-        return digCount;
     }
 
 
@@ -198,6 +182,7 @@ public class Ground : MonoBehaviour
         MakeTextures();
         SetupRendering();
     }
+
     private void GenerateTerrain()
     {
         // Measurements
@@ -206,17 +191,20 @@ public class Ground : MonoBehaviour
         grassPixels = (int)(GrassHeight * Resolution);
         int numPixels = pixelsWide * pixelsHigh;
 
-        // Init data
-        data = new RockType[pixelsWide][];
+        // Init Rock
+        pixelRocks = new RockType[pixelsWide][];
         densityMap = new float[pixelsWide][];
 
-        // Fill data
+        // Fill Rocks
         CreateHeightMaps(0.2f);
         FillSkyGrassDirt();
         //FillRocks(RockType.Rock3, 0.65f, 0.4f, 0.5f, 1f);
         //FillRocks(RockType.Rock4, 0.75f, 0.5f, 0.5f, 0.5f);
-        //FillRocks(RockType.Gold, 0.55f, 0.35f, 0.15f, 1f);
+        FillRocks(RockType.Gold, 0.55f, 0.35f, 0.15f, 1f);
         //FillRocks(RockType.Hardrock, 0.55f, 0.25f, 0f, 1f);
+
+        // Create lower resolution rock grid
+        MakeCollectGrid();
     }
     private void CreateHeightMaps(float perlinMove = 0.2f)
     {
@@ -243,7 +231,7 @@ public class Ground : MonoBehaviour
     {
         for (int x = 0; x < pixelsWide; ++x)
         {
-            data[x] = new RockType[pixelsHigh];
+            pixelRocks[x] = new RockType[pixelsHigh];
             densityMap[x] = new float[pixelsHigh];
 
             int botGrassStart = (int)botHeightMap[x] + grassPixels;
@@ -251,21 +239,21 @@ public class Ground : MonoBehaviour
 
             // Sky - clear
             for (int y = 0; y <= (int)botHeightMap[x]; ++y)
-                data[x][y] = RockType.None;
+                pixelRocks[x][y] = RockType.None;
 
             for (int y = (int)topHeightMap[x]; y < pixelsHigh; ++y)
-                data[x][y] = RockType.None;
+                pixelRocks[x][y] = RockType.None;
 
             // Grass
             for (int y = botGrassStart; y > (int)botHeightMap[x]; --y)
-                data[x][y] = RockType.Grass;
+                pixelRocks[x][y] = RockType.Grass;
 
             for (int y = topGrassStart; y < (int)topHeightMap[x]; ++y)
-                data[x][y] = RockType.Grass;
+                pixelRocks[x][y] = RockType.Grass;
 
             // Dirt
             for (int y = botGrassStart + 1; y < topGrassStart; ++y)
-                data[x][y] = RockType.Dirt;
+                pixelRocks[x][y] = RockType.Dirt;
         }
     }
     private void FillRocks(RockType rock, float perlinThreshold = 0.6f,
@@ -291,7 +279,7 @@ public class Ground : MonoBehaviour
                 if (p > perlinThreshold)
                 {
                     // Fill rock here
-                    data[x][y] = rock;
+                    pixelRocks[x][y] = rock;
                     densityMap[x][y] = (p - perlinThreshold) / (1 - perlinThreshold);
                 }
 
@@ -303,6 +291,34 @@ public class Ground : MonoBehaviour
             perlin.y = perlinStart.y;
         }
     }
+    private void MakeCollectGrid()
+    {
+        cRocksWide = (int)(CollectResolution * Width);
+        cRocksHigh = (int)(CollectResolution * Height);
+
+        collectRocks = new RockType[cRocksWide][];
+
+        float deltaPixels = (float)Resolution / CollectResolution;
+        float halfSq = deltaPixels / 2f;
+        float px = 0;
+        float py = 0;
+
+        for (int x = 0; x < cRocksWide; ++x)
+        {
+            collectRocks[x] = new RockType[cRocksHigh];
+
+            for (int y = 0; y < cRocksHigh; ++y)
+            {
+                // Set collect rock equal to the rock of the middle-most pixel
+                RockType rock = pixelRocks[(int)(px + halfSq)][(int)(py + halfSq)];
+                collectRocks[x][y] = rock;
+                py += deltaPixels;
+            }
+            px += deltaPixels;
+            py = 0;
+        }
+    }
+
     private void MakeTextures()
     {
         // Ground
@@ -320,7 +336,7 @@ public class Ground : MonoBehaviour
         {
             for (int x = 0; x < pixelsWide; ++x)
             {
-                RockType rock = data[x][y];
+                RockType rock = pixelRocks[x][y];
                 switch (rock)
                 {
                     case RockType.Dirt:
@@ -418,17 +434,6 @@ public class Ground : MonoBehaviour
         Graphics.CopyTexture(newDugRT, dugRT);
     }
 
-    private void DigAt(Vector2 groundPos)
-    {
-        DigAt((int)groundPos.x, (int)groundPos.y);
-    }
-    private void DigAt(int x, int y)
-    {
-        data[x][y] = RockType.None;
-    }
-
-    
-
 
     // PRIVATE ACCESSORS
     
@@ -443,18 +448,18 @@ public class Ground : MonoBehaviour
         }
 
         // Surface (grassline and above) vision
-        Vector2 groundPos = WorldToGroundPos(unit.transform.position);
-        int gx = (int)groundPos.x;
+        Vector2 pixelPos = WorldToPixelPos(unit.transform.position);
+        int gx = (int)pixelPos.x;
         if (gx >= 0 && gx < pixelsWide)
         {
             if (topSurfaceVision)
             {
-                if (groundPos.y > topHeightMap[gx] - grassPixels)
+                if (pixelPos.y > topHeightMap[gx] - grassPixels)
                     return true;
             }
             if (botSurfaceVision)
             {
-                if (groundPos.y < topHeightMap[gx] + grassPixels)
+                if (pixelPos.y < topHeightMap[gx] + grassPixels)
                     return true;
             }
         }
@@ -462,62 +467,72 @@ public class Ground : MonoBehaviour
         return false;
     }
      
-    private int GroundPosToLinIndex(Vector2 groundPos)
+    private Vector2 WorldToPixelPos(Vector2 pos)
     {
-        return (int)groundPos.y * pixelsWide + (int)groundPos.x;
-    }
-    private int GroundPosToLinIndex(int x, int y)
-    {
-        return y * pixelsWide + x;
-    }
-    private Vector2 LinIndexToGroundPos(int linIndex)
-    {
-        return new Vector2(linIndex % pixelsWide,
-            Mathf.FloorToInt((float)linIndex / pixelsWide));
-    }
-    private Vector2 WorldToGroundPos(Vector2 pos)
-    {
-        pos -= (Vector2)transform.position;
         pos.x = ((pos.x / Width) + 0.5f) * pixelsWide;
         pos.y = ((pos.y / Height) + 0.5f) * pixelsHigh;
         return pos;
     }
-
-    private RockType GetRockTypeAtGPos(Vector2 groundPos)
+    private IVector2 WorldToCollectPos(Vector2 pos)
     {
-        return GetRockTypeAtGPos((int)groundPos.x, (int)groundPos.y);
+        pos.x = ((pos.x / Width) + 0.5f) * cRocksWide;
+        pos.y = ((pos.y / Height) + 0.5f) * cRocksHigh;
+        return new IVector2(pos);
     }
-    private RockType GetRockTypeAtGPos(int groundX, int groundY)
+    private Vector2 CollectToWorldPos(int x, int y)
     {
-        if (groundX < 0 || groundX >= data.Length || groundY < 0 || groundY >= data[0].Length)
-        {
-            // Out of ground bounds
-            return RockType.None;
-        }
-        return data[groundX][groundY];
+        Vector2 pos = new Vector2();
+        pos.x = (((float)x / cRocksWide) - 0.5f) * Width;
+        pos.y = (((float)y / cRocksHigh) - 0.5f) * Height;
+        return pos;
     }
 
-    private bool InBounds(Vector2 groundPos)
+    private bool InBounds(Vector2 pixelPos)
     {
-        return InBounds((int)groundPos.x, (int)groundPos.y);
+        return InBounds((int)pixelPos.x, (int)pixelPos.y);
     }
     private bool InBounds(int groundX, int groundY)
     {
-        return groundX >= 0 && groundX < data.Length && groundY >= 0 && groundY < data[0].Length;
+        return groundX >= 0 && groundX < pixelRocks.Length && groundY >= 0 && groundY < pixelRocks[0].Length;
     }
     private bool BoundsOverlap(Bounds otherBounds)
     {
         return spriteR.bounds.Intersects(otherBounds);
     }
-    private Vector2 ClampToBounds(Vector2 groundPos)
+    private Vector2 ClampPixelPosToBounds(Vector2 pixelPos)
     {
-        groundPos.x = Mathf.Min(Mathf.Max(0, groundPos.x), pixelsWide-1);
-        groundPos.y = Mathf.Min(Mathf.Max(0, groundPos.y), pixelsHigh - 1);
-        return groundPos;
+        pixelPos.x = Mathf.Min(Mathf.Max(0, pixelPos.x), pixelsWide-1);
+        pixelPos.y = Mathf.Min(Mathf.Max(0, pixelPos.y), pixelsHigh - 1);
+        return pixelPos;
+    }
+    private IVector2 ClampCRockPosToBounds(IVector2 cRockPos)
+    {
+        cRockPos.x = Mathf.Min(Mathf.Max(0, cRockPos.x), cRocksWide - 1);
+        cRockPos.y = Mathf.Min(Mathf.Max(0, cRockPos.y), cRocksHigh - 1);
+        return cRockPos;
     }
 
 
-    // STATIC HELPERS
+    // PRIVATE HELPERS
+
+    private void DebugCollectRocks()
+    {
+        Vector2 half = Vector2.one * (1f / CollectResolution) * 0.5f;
+
+        for (int x = 0; x < cRocksWide; ++x)
+        {
+            for (int y = 0; y < cRocksHigh; ++y)
+            {
+                Vector2 p = CollectToWorldPos(x, y);
+                p += half;
+                RockType rock = collectRocks[x][y];
+                Tools.DebugDrawPlus(p, 
+                    rock == RockType.None ? Color.red :
+                    rock == RockType.Gold ? Color.yellow : Color.green,
+                    0.05f);
+            }
+        }
+    }
 
     private static bool SameSideOfLine(Vector2 p1, Vector2 p2, Vector2 a, Vector2 b)
     {
@@ -529,5 +544,10 @@ public class Ground : MonoBehaviour
     {
         return SameSideOfLine(p, a, b, c) && SameSideOfLine(p, b, a, c) &&
             SameSideOfLine(p, c, a, b);
+    }
+
+    private static int MHDistance(int x1, int y1, int x2, int y2)
+    {
+        return Mathf.Abs(x2 - x1) + Mathf.Abs(y2 - y1);
     }
 }
