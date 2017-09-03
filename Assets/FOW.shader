@@ -48,7 +48,10 @@
 				fixed4 c = tex2D(_MainTex, i.texcoord);
 				fixed4 vision = tex2D(_VisionTex, i.texcoord);
 
-				if (c.r > 0 && vision.r > 0)
+				bool isDug = c.r > 0;
+				bool haveVision = vision.r > 0;
+
+				if (isDug && haveVision)
 				{
 					// Mark dug pixels as dug and seen
 					return fixed4(1, 1, 1, 1);

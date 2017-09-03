@@ -47,35 +47,39 @@ Shader "Custom/Ground"
 				float2 texcoord : TEXCOORD0;
 			};
 
-			v2f vert(appdata_base IN)
+			v2f vert(appdata_base i)
 			{
 				v2f o;
 
-				o.vertex = UnityObjectToClipPos(IN.vertex);
-				o.texcoord = IN.texcoord;
+				o.vertex = UnityObjectToClipPos(i.vertex);
+				o.texcoord = i.texcoord;
 
 				return o;
 			}
 
-			fixed4 frag(v2f IN) : SV_Target
+			fixed4 frag(v2f i) : SV_Target
 			{				
-				fixed4 c = tex2D(_MainTex, IN.texcoord) * _RendererColor;
-				fixed4 dug = tex2D(_DugTex, IN.texcoord);
-				fixed4 vision = tex2D(_VisionTex, IN.texcoord);
+				fixed4 c = tex2D(_MainTex, i.texcoord) * _RendererColor;
+				fixed4 dug = tex2D(_DugTex, i.texcoord);
+				fixed4 vision = tex2D(_VisionTex, i.texcoord);
 
-				if (c.a > 0)
+				bool notSky = c.a > 0;
+
+				if (notSky)
 				{
+					bool isKnownDug = dug.g == 1;
+					bool isDug = dug.g > 0;
+					bool hasVision = vision.r > 0;
+
 					// Dug tint
-					if (dug.g == 1 || (dug.g > 0 && vision.r > 0))
+					if (isKnownDug || (isDug && hasVision))
 					{
-						// marked as known dug, or unknown but vision this frame
 						c.rgb = lerp(c.rgb, _DugColor, _DugColor.a);
 					}
 
 					// Fog tint
-					if (vision.r == 0)
+					if (!hasVision)
 					{
-						// no vision
 						c.rgb = lerp(c.rgb, _FogColor, _FogColor.a);
 					}
 				}

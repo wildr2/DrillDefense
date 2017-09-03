@@ -26,33 +26,35 @@
 			#pragma fragment frag
 			#include "UnityCG.cginc"
 
-			struct vtf
+			struct v2f
 			{
 				float4 vertex : SV_POSITION;
 				float2 uv : TEXCOORD0;
 			};
 
-			vtf vert(appdata_base v)
+			v2f vert(appdata_base i)
 			{
-				vtf o;
+				v2f o;
 
-				o.vertex = mul(UNITY_MATRIX_MVP, v.vertex);
-				o.uv = v.texcoord;
+				o.vertex = mul(UNITY_MATRIX_MVP, i.vertex);
+				o.uv = i.texcoord;
 
 				return o;
 			}
 
-			fixed4 frag(vtf In) : SV_Target
+			fixed4 frag(v2f In) : SV_Target
 			{
 				float2 center = float2(0.5, 0.5);
 				float dist = distance(In.uv.xy, center);
 
 				if (dist > 0.5f)
 				{
+					// No vision
 					return fixed4(0,0,0,0);
 				}
 				else 
 				{
+					// Vision (within circle)
 					return fixed4(1,1,1,1);
 				}
 			}

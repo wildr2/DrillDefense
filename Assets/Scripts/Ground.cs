@@ -192,7 +192,7 @@ public class Ground : MonoBehaviour
         Random.InitState(seed);
         GenerateTerrain();
         MakeTextures();
-        SetupRenderer();
+        SetupRendering();
     }
     private void GenerateTerrain()
     {
@@ -357,7 +357,7 @@ public class Ground : MonoBehaviour
 
         return colors;
     }
-    private void SetupRenderer()
+    private void SetupRendering()
     {
         dugRT = new RenderTexture(pixelsWide, pixelsHigh, 0);
         dugRT.Create();
@@ -385,29 +385,6 @@ public class Ground : MonoBehaviour
         UpdateVision();
         UpdateDugTexture();
     }
-    private void UpdateDugTexture()
-    {
-        Graphics.Blit(dugRT, newDugRT, fowMat, -1);
-        Graphics.CopyTexture(newDugRT, dugRT);
-    }
-
-    private void DigAt(Vector2 groundPos)
-    {
-        DigAt((int)groundPos.x, (int)groundPos.y);
-    }
-    private void DigAt(int x, int y)
-    {
-        data[x][y] = RockType.None;
-    }
-
-    //private IEnumerator UpdateVisionRoutine()
-    //{
-    //    while (true)
-    //    {
-    //        UpdateVision();
-    //        yield return new WaitForSeconds(0.1f);
-    //    }
-    //}
     private void UpdateVision()
     {
         // Update other unit visibility
@@ -431,6 +408,22 @@ public class Ground : MonoBehaviour
             }
         }
     }
+    private void UpdateDugTexture()
+    {
+        Graphics.Blit(dugRT, newDugRT, fowMat, -1);
+        Graphics.CopyTexture(newDugRT, dugRT);
+    }
+
+    private void DigAt(Vector2 groundPos)
+    {
+        DigAt((int)groundPos.x, (int)groundPos.y);
+    }
+    private void DigAt(int x, int y)
+    {
+        data[x][y] = RockType.None;
+    }
+
+    
 
 
     // PRIVATE ACCESSORS
