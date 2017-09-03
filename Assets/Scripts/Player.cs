@@ -98,7 +98,10 @@ public class Player : NetworkBehaviour
     {
         while (true)
         {
-            if (!gm.IsPlaying) yield return null;
+            while (!gm.IsPlaying)
+            {
+                yield return null;
+            }
 
             if (!isPlacing)
             {
@@ -119,7 +122,10 @@ public class Player : NetworkBehaviour
     {
         while (true)
         {
-            if (!gm.IsPlaying) yield return null;
+            while (!gm.IsPlaying)
+            {
+                yield return null;
+            }
 
             float r = Random.value;
             if (r < 0.3f)
