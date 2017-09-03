@@ -19,4 +19,9 @@ public class CamController : MonoBehaviour
         //transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * scrollSharpness);
         transform.position = targetPos;
     }
+    private void OnPreRender()
+    {
+        Ground g = FindObjectOfType<Ground>();
+        g.GraphicsTest();
+    }
 }

@@ -1,4 +1,4 @@
-﻿Shader "Custom/Circle" 
+﻿Shader "Custom/Digger" 
 {
 	Properties
 	{
@@ -26,10 +26,12 @@
 			#pragma fragment frag
 			#include "UnityCG.cginc"
 
+			sampler2D _MainTex;
+
 			struct vtf
 			{
 				float4 vertex : SV_POSITION;
-				float2 uv : TEXCOORD0;
+				float3 uv : TEXCOORD0;
 			};
 
 			vtf vert(appdata_base v)
@@ -44,17 +46,12 @@
 
 			fixed4 frag(vtf In) : SV_Target
 			{
-				float2 center = float2(0.5, 0.5);
-				float dist = distance(In.uv.xy, center);
-
-				if (dist > 0.5f)
+				fixed4 c = tex2D(_MainTex, In.uv);
+				if (c.a > 0)
 				{
-					return fixed4(0,0,0,0);
+					return fixed4(1, 0, 0, 1);
 				}
-				else 
-				{
-					return fixed4(1,1,1,1);
-				}
+				return fixed4(0, 0, 0, 0);
 			}
 			ENDCG
 		}

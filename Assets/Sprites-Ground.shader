@@ -1,11 +1,11 @@
 // Unity built-in shader source. Copyright (c) 2016 Unity Technologies. MIT license (see license.txt)
 
-Shader "Sprites/Ground"
+Shader "Custom/Ground"
 {
     Properties
     {
         [PerRendererData] _MainTex ("Sprite Texture", 2D) = "white" {}
-		_FogTex ("Fog Texture", 2D) = "white" {}
+		_VisionTex ("Fog Texture", 2D) = "white" {}
 		_DugTex("Dug Texture", 2D) = "white" {}
 		_FogColor("Fog Tint", Color) = (1,1,1,1)
 		_DugColor("Dug Tint", Color) = (1,1,1,1)
@@ -35,7 +35,7 @@ Shader "Sprites/Ground"
 			#include "UnityCG.cginc"
 			
 			sampler2D _MainTex;
-			sampler2D _FogTex;
+			sampler2D _VisionTex;
 			sampler2D _DugTex;
 			fixed4 _FogColor;
 			fixed4 _DugColor;
@@ -45,7 +45,6 @@ Shader "Sprites/Ground"
 			{
 				float4 vertex : SV_POSITION;
 				float2 texcoord : TEXCOORD0;
-				float4 scrPos : TEXCOORD1;
 			};
 
 			v2f vert(appdata_base IN)
@@ -54,7 +53,6 @@ Shader "Sprites/Ground"
 
 				o.vertex = UnityObjectToClipPos(IN.vertex);
 				o.texcoord = IN.texcoord;
-				o.scrPos = ComputeScreenPos(o.vertex);
 
 				return o;
 			}
@@ -63,15 +61,23 @@ Shader "Sprites/Ground"
 			{				
 				fixed4 c = tex2D(_MainTex, IN.texcoord) * _RendererColor;
 				fixed4 dug = tex2D(_DugTex, IN.texcoord);
-				fixed4 fog = tex2D(_FogTex, IN.scrPos.xy);
+				fixed4 vision = tex2D(_VisionTex, IN.texcoord);
 
-				if (dug.a == 1)
+				if (c.a > 0)
 				{
-					c.rgb = lerp(c.rgb, _DugColor, _DugColor.a);
-				}
-				if (fog.a == 0 && c.a > 0)
-				{
-					c.rgb = lerp(c.rgb, _FogColor, _FogColor.a);
+					// Dug tint
+					if (dug.g == 1 || (dug.g > 0 && vision.r > 0))
+					{
+						// marked as known dug, or unknown but vision this frame
+						c.rgb = lerp(c.rgb, _DugColor, _DugColor.a);
+					}
+
+					// Fog tint
+					if (vision.r == 0)
+					{
+						// no vision
+						c.rgb = lerp(c.rgb, _FogColor, _FogColor.a);
+					}
 				}
 
 				return c;

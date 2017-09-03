@@ -8,7 +8,9 @@ public abstract class Unit : NetworkBehaviour
     public Player Owner { get; private set; }
     public abstract float VisionRadius { get; }
     public abstract float KillGold { get; }
+
     public Transform graphics;
+    public Transform visionArea;
 
     public System.Action<Unit> onDestroyed;
 
@@ -16,6 +18,7 @@ public abstract class Unit : NetworkBehaviour
     public virtual void Init(Player owner)
     {
         Owner = owner;
+        visionArea.gameObject.SetActive(false);
 
         // Setup vision
         FindObjectOfType<Ground>().RegisterUnitWithVisionSys(this);
