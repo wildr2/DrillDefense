@@ -26,8 +26,13 @@ public abstract class Unit : NetworkBehaviour
     }
     public virtual void SetVisible(bool visible = true)
     {
+        Tools.Log("try set visible: " + visible);
         if (graphics.gameObject.activeInHierarchy != visible)
+        {
             graphics.gameObject.SetActive(visible);
+            Tools.Log("set visible: " + visible);
+        }
+            
     }
 
     protected void Kill(Player killer)
@@ -39,6 +44,11 @@ public abstract class Unit : NetworkBehaviour
 
     protected virtual void Awake()
     {
+        
+    }
+    public override void OnStartClient()
+    {
+        base.OnStartClient();
         SetVisible(false);
     }
     protected virtual void OnDestroy()

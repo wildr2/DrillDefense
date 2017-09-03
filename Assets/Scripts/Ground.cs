@@ -52,13 +52,6 @@ public class Ground : MonoBehaviour
     private RockType[][] pixelRocks; // rock type for each pixel ([x][y] ground units)
     private RockType[][] collectRocks;
 
-    // Byte pixelRocks value constants
-    private const byte ValFog = 255;
-    private const byte ValNoFog = 0;
-    private const byte ValDug = 255;
-    private const byte ValDugButHidden = 1;
-    private const byte ValNotDug = 0;
-
     // Vision System
     private List<Player> povPlayers = new List<Player>();
     private List<Unit> povUnits = new List<Unit>();
@@ -126,6 +119,7 @@ public class Ground : MonoBehaviour
     public void SetVisionPOV(Player player)
     {
         povPlayers.Add(player);
+
         if (player.IsTop)
             topSurfaceVision = true;
         else
@@ -484,7 +478,7 @@ public class Ground : MonoBehaviour
             }
             if (botSurfaceVision)
             {
-                if (pixelPos.y < topHeightMap[gx] + grassPixels)
+                if (pixelPos.y < botHeightMap[gx] + grassPixels)
                     return true;
             }
         }
