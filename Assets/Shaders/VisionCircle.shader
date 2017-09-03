@@ -1,4 +1,4 @@
-﻿Shader "Custom/Circle" 
+﻿Shader "Custom/VisionCircle" 
 {
 	Properties
 	{

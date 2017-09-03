@@ -11,7 +11,6 @@ public class Drill : Unit
     private float health = 1;
     private float speed = 1; // units per second
 
-    new private PolygonCollider2D collider;
     private Ground ground;
 
     // args: rockCounts 
@@ -33,7 +32,6 @@ public class Drill : Unit
     {
         base.Awake();
         ground = FindObjectOfType<Ground>();
-        collider = GetComponent<PolygonCollider2D>();
     }
     private void Update()
     {

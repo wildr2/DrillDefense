@@ -38,8 +38,9 @@ public class Ground : MonoBehaviour
     private Texture2D tex;
     public Camera visionCam, dugCam;
     private RenderTexture visionRT;
-    public RenderTexture newDugRT, dugRT;
-    private Material fowMat;
+    private RenderTexture newDugRT, dugRT;
+    private Material dugVisionMat;
+    public Shader dugVisionShader;
 
     // Data
     /// <summary>
@@ -190,7 +191,6 @@ public class Ground : MonoBehaviour
         pixelsWide = (int)(Resolution * Width);
         pixelsHigh = (int)(Resolution * Height);
         grassPixels = (int)(GrassHeight * Resolution);
-        int numPixels = pixelsWide * pixelsHigh;
 
         // Init Rock
         pixelRocks = new RockType[pixelsWide][];
@@ -199,10 +199,10 @@ public class Ground : MonoBehaviour
         // Fill Rocks
         CreateHeightMaps(0.2f);
         FillSkyGrassDirt();
-        FillRocks(RockType.Rock3, 0.65f, 0.4f, 0.5f, 1f);
-        FillRocks(RockType.Rock4, 0.75f, 0.5f, 0.5f, 0.5f);
-        //FillRocks(RockType.Gold, 0.55f, 0.35f, 0.15f, 1f);
-        //FillRocks(RockType.Hardrock, 0.55f, 0.25f, 0f, 1f);
+        //FillRocks(RockType.Rock3, 0.65f, 0.4f, 0.5f, 1f);
+        //FillRocks(RockType.Rock4, 0.75f, 0.5f, 0.5f, 0.5f);
+        FillRocks(RockType.Gold, 0.55f, 0.35f, 0.15f, 1f);
+        FillRocks(RockType.Hardrock, 0.55f, 0.25f, 0f, 1f);
 
         // Create lower resolution rock grid
         MakeCollectGrid();
@@ -396,17 +396,17 @@ public class Ground : MonoBehaviour
         spriteR.material.SetTexture("_VisionTex", visionRT);
         spriteR.material.SetTexture("_DugTex", dugRT);
 
-        fowMat = new Material(Shader.Find("Custom/FOW"));
-        fowMat.SetTexture("_VisionTex", visionRT);
+        dugVisionMat = new Material(dugVisionShader);
+        dugVisionMat.SetTexture("_VisionTex", visionRT);
     }
 
-    private void LateUpdate()
+    private void Update()
     {
         if (!initialized) return;
-        UpdateVision();
-        UpdateDugTexture();
+        UpdateUnitVisibility();
+        UpdateDugRTWithVision();
     }
-    private void UpdateVision()
+    private void UpdateUnitVisibility()
     {
         // Update other unit visibility
         for (int i = 0; i < nonPovUnits.Count; ++i)
@@ -429,9 +429,9 @@ public class Ground : MonoBehaviour
             }
         }
     }
-    private void UpdateDugTexture()
+    private void UpdateDugRTWithVision()
     {
-        Graphics.Blit(dugRT, newDugRT, fowMat, -1);
+        Graphics.Blit(dugRT, newDugRT, dugVisionMat, -1);
         Graphics.CopyTexture(newDugRT, dugRT);
     }
 

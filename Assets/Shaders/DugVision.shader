@@ -1,4 +1,4 @@
-﻿Shader "Custom/FOW"
+﻿Shader "Custom/DugVision"
 {
 	Properties
 	{
