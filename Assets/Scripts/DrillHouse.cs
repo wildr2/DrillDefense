@@ -31,7 +31,6 @@ public class DrillHouse : Building
         drill.SetDirection(-transform.up);
         NetworkServer.Spawn(drill.gameObject);
 
-        if (!isClient) OnLaunchDrill(drill);
         RpcOnLaunchDrill(drill.netId);
 
         return drill;

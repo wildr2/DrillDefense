@@ -24,7 +24,7 @@ public class Player : NetworkBehaviour
     // Gold
     private const int startGold = 100;
     private const int goldPerSecond = 1;
-    private const int goldValue = 20; // per unit square of rock
+    private const int goldValue = 32; // per unit square of rock
 
     // Construction
     private List<Building> buildings = new List<Building>();
@@ -161,6 +161,14 @@ public class Player : NetworkBehaviour
                 LaunchDrill(house);
                 return;
             }
+
+            // Explode drill
+            Drill drill = col.GetComponent<Drill>();
+            if (drill != null)
+            {
+                ExplodeDrill(drill);
+                return;
+            }
         }
     }
 
@@ -254,6 +262,19 @@ public class Player : NetworkBehaviour
         thing.up = ground.GetNormalAt(xPos, IsTop);
         thing.position = new Vector2(xPos, ground.GetHeightAt(xPos, IsTop));
         thing.position -= thing.up * 0.1f;
+    }
+
+
+    private void ExplodeDrill(Drill drill)
+    {
+        CmdExplodeDrill(drill.netId);
+    }
+    [Command]
+    private void CmdExplodeDrill(NetworkInstanceId drillNetId)
+    {
+        Drill drill = NetworkServer.FindLocalObject(drillNetId).GetComponent<Drill>();
+        if (drill != null)
+            drill.Explode();
     }
 
 

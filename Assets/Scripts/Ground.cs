@@ -178,7 +178,6 @@ public class Ground : MonoBehaviour
         SetupRendering();
     }
 
-    // Generation
     private GenData GenerateTerrain()
     {
         // Measurements
