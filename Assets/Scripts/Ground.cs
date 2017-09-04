@@ -48,9 +48,8 @@ public class Ground : MonoBehaviour
     /// - cast to int for exact exclusive height
     /// </summary>
     private float[] topHeightMap, botHeightMap;
-    private float[][] densityMap;
-    private RockType[][] pixelRocks; // rock type for each pixel ([x][y] ground units)
     private RockType[][] collectRocks;
+    
 
     // Vision System
     private List<Player> povPlayers = new List<Player>();
@@ -174,32 +173,30 @@ public class Ground : MonoBehaviour
     private void Make(int seed)
     {
         Random.InitState(seed);
-        GenerateTerrain();
-        MakeTextures();
+        GenData dat = GenerateTerrain();
+        MakeTextures(dat.pixels);
         SetupRendering();
     }
 
-    private void GenerateTerrain()
+    // Generation
+    private GenData GenerateTerrain()
     {
         // Measurements
         pixelsWide = (int)(Resolution * Width);
         pixelsHigh = (int)(Resolution * Height);
         grassPixels = (int)(GrassHeight * Resolution);
 
-        // Init Rock
-        pixelRocks = new RockType[pixelsWide][];
-        densityMap = new float[pixelsWide][];
+        // Data
+        GenData dat = new GenData(pixelsWide, pixelsHigh);
 
-        // Fill Rocks
+        // Create
         CreateHeightMaps(0.2f);
-        FillSkyGrassDirt();
-        //FillRocks(RockType.Rock3, 0.65f, 0.4f, 0.5f, 1f);
-        //FillRocks(RockType.Rock4, 0.75f, 0.5f, 0.5f, 0.5f);
-        FillRocks(RockType.Gold, 0.55f, 0.35f, 0.15f, 1f);
-        FillRocks(RockType.Hardrock, 0.55f, 0.25f, 0f, 1f);
+        Fill(dat);
 
         // Create lower resolution rock grid
-        MakeCollectGrid();
+        MakeCollectGrid(dat);
+
+        return dat;
     }
     private void CreateHeightMaps(float perlinMove = 0.2f)
     {
@@ -222,71 +219,100 @@ public class Ground : MonoBehaviour
             botHeightMap[x] = offsetBot * Resolution;
         }
     }
-    private void FillSkyGrassDirt()
+    private void Fill(GenData dat)
     {
-        for (int x = 0; x < pixelsWide; ++x)
+        int x = 0;
+        int y = 0;
+
+        for (int i = 0; i < dat.pixels.Length; ++i)
         {
-            pixelRocks[x] = new RockType[pixelsHigh];
-            densityMap[x] = new float[pixelsHigh];
+            // Fill
+            if  (FillSky(dat, x, y, i)) { }
+            else if (FillTopGrass(dat, x, y, i)) { }
+            else if (FillBotGrass(dat, x, y, i)) { }
+            else if (FillHardrock(dat, x, y, i)) { }
+            else if (FillGold(dat, x, y, i)) { }
+            else FillDirt(dat, x, y, i);
 
-            int botGrassStart = (int)botHeightMap[x] + grassPixels;
-            int topGrassStart = (int)topHeightMap[x] - grassPixels;
-
-            // Sky - clear
-            for (int y = 0; y <= (int)botHeightMap[x]; ++y)
-                pixelRocks[x][y] = RockType.None;
-
-            for (int y = (int)topHeightMap[x]; y < pixelsHigh; ++y)
-                pixelRocks[x][y] = RockType.None;
-
-            // Grass
-            for (int y = botGrassStart; y > (int)botHeightMap[x]; --y)
-                pixelRocks[x][y] = RockType.Grass;
-
-            for (int y = topGrassStart; y < (int)topHeightMap[x]; ++y)
-                pixelRocks[x][y] = RockType.Grass;
-
-            // Dirt
-            for (int y = botGrassStart + 1; y < topGrassStart; ++y)
-                pixelRocks[x][y] = RockType.Dirt;
-        }
-    }
-    private void FillRocks(RockType rock, float perlinThreshold = 0.6f,
-        float perlinMove = 0.45f, float depthEffect = 0, float idealDepth = 1)
-    {
-        perlinMove /= Resolution;
-
-        Vector2 perlinStart = new Vector2(Random.value, Random.value) * 1000f;
-        Vector2 perlin = perlinStart;
-
-        for (int x = 0; x < pixelsWide; ++x)
-        {
-            int botGrassStart = (int)botHeightMap[x] + grassPixels;
-            int topGrassStart = (int)topHeightMap[x] - grassPixels;
-
-            for (int y = botGrassStart + 1; y < topGrassStart; ++y)
+            // Increment pixel coords
+            ++x;
+            if (x == pixelsWide)
             {
-                float depth = 1 - (Mathf.Abs(y - (pixelsHigh / 2f)) / pixelsHigh) * 2f;
-                float idealDepthCloseness = 1 - Mathf.Abs(idealDepth - depth);
-                float d = Mathf.Pow(idealDepthCloseness, depthEffect);
-                float p = Mathf.PerlinNoise(perlin.x, perlin.y) * d;
-                
-                if (p > perlinThreshold)
-                {
-                    // Fill rock here
-                    pixelRocks[x][y] = rock;
-                    densityMap[x][y] = (p - perlinThreshold) / (1 - perlinThreshold);
-                }
-
-                perlin.y += perlinMove;
+                x = 0;
+                y += 1;
+                dat.SetDepth(y);
             }
-
-            // Update perlin pos
-            perlin.x += perlinMove;
-            perlin.y = perlinStart.y;
         }
     }
-    private void MakeCollectGrid()
+    private bool FillSky(GenData dat, int x, int y, int i)
+    {
+        if (y >= (int)topHeightMap[x] || y <= (int)botHeightMap[x])
+        {
+            // Fill
+            dat.pixels[i] = clearColor;
+            dat.rocks[x][y] = RockType.None;
+            return true;
+        }
+        return false;
+    }
+    private bool FillTopGrass(GenData dat, int x, int y, int i)
+    {
+        if (y >= (int)topHeightMap[x] - grassPixels)
+        {
+            // Fill
+            dat.pixels[i] = topGrassColor;
+            dat.rocks[x][y] = RockType.Grass;
+            return true;
+        }
+        return false;
+    }
+    private bool FillBotGrass(GenData dat, int x, int y, int i)
+    {
+        if (y <= (int)botHeightMap[x] + grassPixels)
+        {
+            // Fill
+            dat.pixels[i] = botGrassColor;
+            dat.rocks[x][y] = RockType.Grass;
+            return true;
+        }
+        return false;
+    }
+    private bool FillHardrock(GenData dat, int x, int y, int i)
+    {
+        float p = dat.Perlin(x, y, 0.0055f, 0);
+        dat.density = p / 0.57f; // * dat.GetDepthFactor(y, 1, 0);
+
+        if (dat.density >= 1)
+        {
+            // Fill
+            dat.pixels[i] = hardrockColor;
+            dat.rocks[x][y] = RockType.Hardrock;
+            return true;
+        }
+        return false;
+    }
+    private bool FillGold(GenData dat, int x, int y, int i)
+    {
+        float p = dat.Perlin(x, y, 0.0065f, 1);
+        dat.density = (p / 0.53f - Mathf.Pow(dat.density, 16)) * dat.GetDepthFactor(1, 0.25f);
+
+        if (dat.density >= 1)
+        {
+            // Fill
+            dat.pixels[i] = goldColor;
+            dat.rocks[x][y] = RockType.Gold;
+            return true;
+        }
+        return false;
+    }
+    private bool FillDirt(GenData dat, int x, int y, int i)
+    {
+        // Fill
+        dat.pixels[i] = dirtColor;
+        dat.rocks[x][y] = RockType.Dirt;
+        return true;
+    }
+    private void MakeCollectGrid(GenData dat)
     {
         cRocksWide = (int)(CollectResolution * Width);
         cRocksHigh = (int)(CollectResolution * Height);
@@ -305,7 +331,7 @@ public class Ground : MonoBehaviour
             for (int y = 0; y < cRocksHigh; ++y)
             {
                 // Set collect rock equal to the rock of the middle-most pixel
-                RockType rock = pixelRocks[(int)(px + halfSq)][(int)(py + halfSq)];
+                RockType rock = dat.rocks[(int)(px + halfSq)][(int)(py + halfSq)];
                 collectRocks[x][y] = rock;
                 py += deltaPixels;
             }
@@ -314,63 +340,13 @@ public class Ground : MonoBehaviour
         }
     }
 
-    private void MakeTextures()
+    private void MakeTextures(Color[] pixels)
     {
         // Ground
         tex = new Texture2D(pixelsWide, pixelsHigh, TextureFormat.RGBA32, false);
         tex.filterMode = FilterMode.Point;
-        tex.SetPixels(ColorsFromData());
+        tex.SetPixels(pixels);
         tex.Apply();
-    }
-    private Color[] ColorsFromData()
-    {
-        Color[] colors = new Color[pixelsWide * pixelsHigh];
-
-        int i = 0;
-        for (int y = 0; y < pixelsHigh; ++y)
-        {
-            for (int x = 0; x < pixelsWide; ++x)
-            {
-                RockType rock = pixelRocks[x][y];
-                switch (rock)
-                {
-                    case RockType.Dirt:
-                        colors[i] = dirtColor;
-                        break;
-
-                    case RockType.Gold:
-                        colors[i] = Color.Lerp(dirtColor, goldColor,
-                            0.5f + (int)(densityMap[x][y] * 5) / 5f);
-                        break;
-
-                    case RockType.Hardrock:
-                        colors[i] = Color.Lerp(dirtColor, hardrockColor,
-                            0.7f + (int)(densityMap[x][y] * 3) / 3f);
-                        break;
-
-                    case RockType.Rock3:
-                        colors[i] = Color.Lerp(dirtColor, rock3Color,
-                            0.5f + (int)(densityMap[x][y] * 3) / 3f);
-                        break;
-
-                    case RockType.Rock4:
-                        colors[i] = Color.Lerp(rock4Color, Color.white,
-                            (int)(densityMap[x][y] * 3) / 3f * 0.7f);
-                        break;
-
-                    case RockType.None:
-                        colors[i] = clearColor;
-                        break;
-
-                    case RockType.Grass:
-                        colors[i] = y > pixelsHigh / 2 ? topGrassColor : botGrassColor;
-                        break;
-                }
-                ++i;
-            }
-        }
-
-        return colors;
     }
     private void SetupRendering()
     {
@@ -399,6 +375,7 @@ public class Ground : MonoBehaviour
         if (!initialized) return;
         UpdateUnitVisibility();
         UpdateDugRTWithVision();
+        //DebugCollectRocks();
     }
     private void UpdateUnitVisibility()
     {
@@ -455,7 +432,7 @@ public class Ground : MonoBehaviour
 
 
     // PRIVATE ACCESSORS
-    
+
     private bool ClientCanSee(Unit unit)
     {
         // Visible if in vision range of friendly unit
@@ -506,14 +483,6 @@ public class Ground : MonoBehaviour
         return pos;
     }
 
-    private bool InBounds(Vector2 pixelPos)
-    {
-        return InBounds((int)pixelPos.x, (int)pixelPos.y);
-    }
-    private bool InBounds(int groundX, int groundY)
-    {
-        return groundX >= 0 && groundX < pixelRocks.Length && groundY >= 0 && groundY < pixelRocks[0].Length;
-    }
     private bool BoundsOverlap(Bounds otherBounds)
     {
         return spriteR.bounds.Intersects(otherBounds);
@@ -542,6 +511,7 @@ public class Ground : MonoBehaviour
         {
             for (int y = 0; y < cRocksHigh; ++y)
             {
+                
                 Vector2 p = CollectToWorldPos(x, y);
                 p += half;
                 RockType rock = collectRocks[x][y];
@@ -568,5 +538,58 @@ public class Ground : MonoBehaviour
     private static int MHDistance(int x1, int y1, int x2, int y2)
     {
         return Mathf.Abs(x2 - x1) + Mathf.Abs(y2 - y1);
+    }
+
+
+    class GenData
+    {
+        // Generation output
+        public Color[] pixels;
+        public RockType[][] rocks;
+
+        // Noise
+        private Vector2 perlinStart;
+        private float perlinOffsetScale;
+
+        // General
+        private float height;
+        private int midY;
+
+        // Current pixel info
+        public float density;
+        private float depth = 0;
+
+
+        public GenData(int pixelsWide, int pixelsHigh)
+        {
+            height = pixelsHigh;
+            midY = pixelsHigh / 2;
+
+            perlinOffsetScale = pixelsWide;
+            perlinStart = new Vector2(Random.value, Random.value) * perlinOffsetScale;
+
+            pixels = new Color[pixelsWide * pixelsHigh];
+            rocks = new RockType[pixelsWide][];
+
+            for (int x = 0; x < pixelsWide; ++x)
+            {
+                rocks[x] = new RockType[pixelsHigh];
+            }
+        }
+        public void SetDepth(int y)
+        {
+            depth = 1 - (Mathf.Abs(y - midY) / height) * 2f;
+        }
+        public float Perlin(int x, int y, float delta, int offsets)
+        {
+            return Mathf.PerlinNoise(
+                perlinStart.x + offsets * perlinOffsetScale + x * delta,
+                perlinStart.y + y * delta);
+        }
+        public float GetDepthFactor(float idealDepth=1, float depthImportance=0.5f)
+        {
+            float dist = 1 - Mathf.Abs(idealDepth - depth);
+            return Mathf.Pow(dist, depthImportance);
+        }
     }
 }
