@@ -227,11 +227,13 @@ public class Ground : MonoBehaviour
         for (int i = 0; i < dat.pixels.Length; ++i)
         {
             // Fill
+            dat.density = 0;
             if  (FillSky(dat, x, y, i)) { }
             else if (FillTopGrass(dat, x, y, i)) { }
             else if (FillBotGrass(dat, x, y, i)) { }
             else if (FillHardrock(dat, x, y, i)) { }
             else if (FillGold(dat, x, y, i)) { }
+            else if (FillPearl(dat, x, y, i)) { }
             else FillDirt(dat, x, y, i);
 
             // Increment pixel coords
@@ -280,14 +282,11 @@ public class Ground : MonoBehaviour
     private bool FillHardrock(GenData dat, int x, int y, int i)
     {
         float p = dat.Perlin(x, y, 0.0055f, 0);
-        dat.density = (p / 0.57f); // * dat.GetDepthFactor(y, 1, 0);
+        dat.SetDensity(p, 0.57f);
 
         if (dat.density >= 1)
         {
             // Fill
-            //float t = (dat.density - 1) / (1 - 0.57f);
-            //t = (int)(t * 2) / 2f;
-            //dat.pixels[i] = Color.Lerp(dirtColor, hardrockColor, 0.8f + t);
             dat.pixels[i] = hardrockColor;
             dat.rocks[x][y] = RockType.Hardrock;
             return true;
@@ -297,7 +296,7 @@ public class Ground : MonoBehaviour
     private bool FillGold(GenData dat, int x, int y, int i)
     {
         float p = dat.Perlin(x, y, 0.0065f, 1);
-        dat.density = (p / 0.53f - Mathf.Pow(dat.density, 16)) * dat.GetDepthFactor(1, 0.25f);
+        dat.SetDensity(p, 0.53f, dat.GetDepthFactor(1, 0.25f));
 
         if (dat.density >= 1)
         {
@@ -307,6 +306,23 @@ public class Ground : MonoBehaviour
             dat.pixels[i] = Color.Lerp(dirtColor, goldColor, 0.8f + t);
             //dat.pixels[i] = goldColor;
             dat.rocks[x][y] = RockType.Gold;
+            return true;
+        }
+        return false;
+    }
+    private bool FillPearl(GenData dat, int x, int y, int i)
+    {
+        float p = dat.Perlin(x, y, 0.01f, 2);
+        dat.SetDensity(p, 0.63f, dat.GetDepthFactor(0.45f, 1));
+
+        if (dat.density >= 1)
+        {
+            // Fill
+            //float t = (dat.density - 1) / (1 - 0.53f);
+            //t = (int)(t * 2) / 2f;
+            //dat.pixels[i] = Color.Lerp(dirtColor, goldColor, 0.8f + t);
+            dat.pixels[i] = rock4Color;
+            dat.rocks[x][y] = RockType.Rock4;
             return true;
         }
         return false;
@@ -585,6 +601,11 @@ public class Ground : MonoBehaviour
         public void SetDepth(int y)
         {
             depth = 1 - (Mathf.Abs(y - midY) / height) * 2f;
+        }
+        public void SetDensity(float noise, float rockThreshold, float depthFactor=1)
+        {
+            float d = (noise / rockThreshold - Mathf.Pow(density, 16)) * depthFactor;
+            density = Mathf.Max(density, d);
         }
         public float Perlin(int x, int y, float delta, int offsets)
         {
