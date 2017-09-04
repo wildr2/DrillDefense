@@ -280,11 +280,14 @@ public class Ground : MonoBehaviour
     private bool FillHardrock(GenData dat, int x, int y, int i)
     {
         float p = dat.Perlin(x, y, 0.0055f, 0);
-        dat.density = p / 0.57f; // * dat.GetDepthFactor(y, 1, 0);
+        dat.density = (p / 0.57f); // * dat.GetDepthFactor(y, 1, 0);
 
         if (dat.density >= 1)
         {
             // Fill
+            //float t = (dat.density - 1) / (1 - 0.57f);
+            //t = (int)(t * 2) / 2f;
+            //dat.pixels[i] = Color.Lerp(dirtColor, hardrockColor, 0.8f + t);
             dat.pixels[i] = hardrockColor;
             dat.rocks[x][y] = RockType.Hardrock;
             return true;
@@ -299,7 +302,10 @@ public class Ground : MonoBehaviour
         if (dat.density >= 1)
         {
             // Fill
-            dat.pixels[i] = goldColor;
+            float t = (dat.density - 1) / (1 - 0.53f);
+            t = (int)(t * 2) / 2f;
+            dat.pixels[i] = Color.Lerp(dirtColor, goldColor, 0.8f + t);
+            //dat.pixels[i] = goldColor;
             dat.rocks[x][y] = RockType.Gold;
             return true;
         }
