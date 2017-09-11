@@ -1,4 +1,6 @@
-﻿Shader "Custom/VisionCircle" 
+﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
+
+Shader "Custom/VisionCircle" 
 {
 	Properties
 	{
@@ -36,7 +38,7 @@
 			{
 				v2f o;
 
-				o.vertex = mul(UNITY_MATRIX_MVP, i.vertex);
+				o.vertex = UnityObjectToClipPos(i.vertex);
 				o.uv = i.texcoord;
 
 				return o;
@@ -44,10 +46,16 @@
 
 			fixed4 frag(v2f In) : SV_Target
 			{
+				const float PI = 3.14159;
+
 				float2 center = float2(0.5, 0.5);
 				float dist = distance(In.uv.xy, center);
+				float a = atan2(In.uv.y - 0.5, In.uv.x - 0.5);
+				float t = (sin(a * 5 + _Time * 30) + 1) * 0.5;
+				float t2 = (sin(a * 3 - _Time * 50) + 1) * 0.5;
+				float r = 0.47 + 0.015 * t + 0.015 * t2;
 
-				if (dist > 0.5f)
+				if (dist > r)
 				{
 					// No vision
 					return fixed4(0,0,0,0);

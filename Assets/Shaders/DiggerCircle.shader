@@ -1,4 +1,6 @@
-﻿Shader "Custom/DiggerCircle" 
+﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
+
+Shader "Custom/DiggerCircle" 
 {
 	Properties
 	{
@@ -36,7 +38,7 @@
 			{
 				v2f o;
 
-				o.vertex = mul(UNITY_MATRIX_MVP, i.vertex);
+				o.vertex = UnityObjectToClipPos(i.vertex);
 				o.uv = i.texcoord;
 
 				return o;
