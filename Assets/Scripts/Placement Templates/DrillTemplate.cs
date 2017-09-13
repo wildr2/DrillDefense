@@ -14,10 +14,11 @@ public class DrillTemplate : PlacementTemplate
     
     protected override void UpdateTarget()
     {
-        if (!TargetUnit || TargetUnit as DrillHouse)
-        {
-            TargetUnit = GetNearestUnit(MousePos, targetAttachDist, targetUnitMask, true);
-        }
+        TargetUnit = GetNearestUnit(MousePos, targetAttachDist, targetUnitMask, true);
+        //if (!TargetUnit || TargetUnit as DrillHouse)
+        //{
+        //    TargetUnit = GetNearestUnit(MousePos, targetAttachDist, targetUnitMask, true);
+        //}
     }
     protected override void UpdateTransform()
     {

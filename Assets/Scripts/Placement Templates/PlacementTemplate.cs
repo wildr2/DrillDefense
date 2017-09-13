@@ -19,6 +19,8 @@ public abstract class PlacementTemplate : MonoBehaviour
     }
     private bool targetSet = false;
 
+    public bool TargetLocked { get; set; }
+
     protected Vector2 MousePos { get; private set; }
 
 
@@ -48,7 +50,10 @@ public abstract class PlacementTemplate : MonoBehaviour
             return;
         }
 
-        UpdateTarget();
+        if (!TargetLocked)
+        {
+            UpdateTarget();
+        }
         UpdateTransform();
     }
 

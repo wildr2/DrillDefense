@@ -29,7 +29,8 @@ public class Player : NetworkBehaviour
 
     // Construction
     private List<Building> buildings = new List<Building>();
-    private bool isPlacing = false;
+    private Coroutine placeRoutine = null;
+    private PlacementTemplate placeTemplate = null;
 
     // Events
     public System.Action onInputBuild;
@@ -104,18 +105,20 @@ public class Player : NetworkBehaviour
                 yield return null;
             }
 
-            if (!isPlacing)
+            // Build
+            if (Input.GetKeyDown(KeyCode.H))
             {
-                // Build
-                if (Input.GetKeyDown(KeyCode.H))
-                {
-                    StartCoroutine(PlaceBuilding(drillHousePrefab));
-                }
-                else if (Input.GetKeyDown(KeyCode.D))
-                {
-                    StartCoroutine(PlaceDrill(drillPrefab));
-                }
+                if (placeRoutine != null) StopPlacing();
+                placeRoutine = StartCoroutine(PlaceBuilding(drillHousePrefab));
+            }
+            else if (Input.GetKeyDown(KeyCode.D))
+            {
+                if (placeRoutine != null) StopPlacing();
+                placeRoutine = StartCoroutine(PlaceDrill(drillPrefab));
+            }
 
+            if (placeRoutine == null)
+            {
                 // Click action
                 UpdateClickAction();
             }
@@ -195,15 +198,18 @@ public class Player : NetworkBehaviour
     {
         // Create building template
         BuildingTemplate template = Instantiate(buildingPrefab.templatePrefab);
+        placeTemplate = template;
         template.Init(this, ground);
         aimLine.enabled = true;
-        isPlacing = true;
 
         while (template != null)
         {
             // Aimline
             SetAimLine(template.transform.position,
                 template.transform.position - template.transform.up * 20);
+
+            // Target lock
+            template.TargetLocked = Input.GetKey(KeyCode.H);
 
             // Confirm
             if (Input.GetMouseButtonDown(0))
@@ -233,26 +239,30 @@ public class Player : NetworkBehaviour
         }
 
         // Cleanup
-        if (template != null)
+        if (placeTemplate != null)
         {
-            Destroy(template.gameObject);
+            Destroy(placeTemplate.gameObject);
         }
+        placeTemplate = null;
         aimLine.enabled = false;
-        isPlacing = false;
+        placeRoutine = null;
     }
     private IEnumerator PlaceDrill(Drill drillPrefab)
     {
         // Create building template
         PlacementTemplate template = Instantiate(drillPrefab.templatePrefab);
+        placeTemplate = template;
         template.Init(this);
         aimLine.enabled = true;
-        isPlacing = true;
 
         while (template != null)
         {
             // Aimline
             SetAimLine(template.transform.position,
                 template.transform.position + template.transform.up * 20);
+
+            // Target lock
+            template.TargetLocked = Input.GetKey(KeyCode.D);
 
             // Confirm
             if (Input.GetMouseButtonDown(0))
@@ -275,12 +285,25 @@ public class Player : NetworkBehaviour
         }
 
         // Cleanup
-        if (template != null)
+        if (placeTemplate != null)
         {
-            Destroy(template.gameObject);
+            Destroy(placeTemplate.gameObject);
         }
+        placeTemplate = null;
         aimLine.enabled = false;
-        isPlacing = false;
+        placeRoutine = null;
+    }
+    private void StopPlacing()
+    {
+        StopCoroutine(placeRoutine);
+        aimLine.enabled = false;
+        placeRoutine = null;
+
+        if (placeTemplate != null)
+        {
+            Destroy(placeTemplate.gameObject);
+        }
+        placeTemplate = null;
     }
 
     private void ExplodeDrill(Drill drill)

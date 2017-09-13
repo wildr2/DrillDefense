@@ -17,28 +17,18 @@ public class BuildingTemplate : PlacementTemplate
     }
     protected override void UpdateTarget()
     {
-        if (!TargetUnit)
+        Unit potentialTarget = GetNearestUnit(MousePos, targetAttachDist, targetUnitMask, true);
+        if (potentialTarget)
         {
-            Unit unit = GetNearestUnit(MousePos, targetAttachDist, targetUnitMask, true);
-            if (unit != null)
-            {
-                float dist = Vector2.Distance(unit.transform.position, MousePos);
-                float groundDist = Mathf.Abs(ground.GetHeightAt(MousePos.x, owner.IsTop) - MousePos.y);
-                if (dist < groundDist)
-                {
-                    TargetUnit = unit;
-                }
-            }
+            float potentialTargetDist = Vector2.Distance(potentialTarget.transform.position, MousePos);
+            float groundDist = Mathf.Abs(ground.GetHeightAt(MousePos.x, owner.IsTop) - MousePos.y);
+
+            TargetUnit = potentialTargetDist < groundDist ? potentialTarget : null;
         }
         else
         {
-            float dist = Vector2.Distance(TargetUnit.transform.position, MousePos);
-            float groundDist = Mathf.Abs(ground.GetHeightAt(MousePos.x, owner.IsTop) - MousePos.y);
-            if (dist > groundDist)
-            {
-                TargetUnit = null;
-            }
-        }
+            TargetUnit = null;
+        } 
     }
     protected override void UpdateTransform()
     {
