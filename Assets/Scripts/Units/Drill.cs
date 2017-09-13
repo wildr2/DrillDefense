@@ -43,7 +43,7 @@ public class Drill : Unit
     {
         // Dig
         int[] rockCounts;
-        Vector3 center = transform.position + transform.up * 0.5f;
+        Vector3 center = transform.position - transform.up * 0.5f;
         ground.CollectRocks(center, exploding ? 4 : 1, out rockCounts);
 
         // Decrease Health
