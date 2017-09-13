@@ -160,12 +160,12 @@ public class Player : NetworkBehaviour
             if (col == null) return;
 
             // Launch Drill
-            DrillHouse house = col.GetComponent<DrillHouse>();
-            if (house != null && house.CanLaunchDrill(this))
-            {
-                LaunchDrill(house);
-                return;
-            }
+            //DrillHouse house = col.GetComponent<DrillHouse>();
+            //if (house != null && house.CanLaunchDrill(this))
+            //{
+            //    LaunchDrill(house);
+            //    return;
+            //}
 
             // Explode drill
             Drill drill = col.GetComponent<Drill>();

@@ -6,6 +6,7 @@ public class DrillTemplate : PlacementTemplate
 {
     public float drillPlaceDist = 1.25f;
     public float targetAttachDist = 1;
+    public float atDrillMaxAngle = 45;
     public LayerMask targetUnitMask;
 
     private const float houseOffset = 0.35f;
@@ -25,7 +26,7 @@ public class DrillTemplate : PlacementTemplate
             if (TargetUnit as Drill)
             {
                 // Near drill
-                SetAroundTarget(drillPlaceDist, true, 45, TargetUnit.transform.up);
+                SetAroundTarget(drillPlaceDist, true, atDrillMaxAngle, -owner.Up);
             }
             else
             {

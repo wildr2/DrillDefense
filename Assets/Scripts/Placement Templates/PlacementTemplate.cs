@@ -7,8 +7,17 @@ public abstract class PlacementTemplate : MonoBehaviour
     public Transform graphics;
     protected Player owner;
 
-    public Unit TargetUnit { get; protected set; }
-    private bool hadTargetLast = false;
+    private Unit targetUnit;
+    public Unit TargetUnit
+    {
+        get { return targetUnit; }
+        protected set
+        {
+            targetUnit = value;
+            targetSet = value != null;
+        }
+    }
+    private bool targetSet = false;
 
     protected Vector2 MousePos { get; private set; }
 
@@ -33,7 +42,7 @@ public abstract class PlacementTemplate : MonoBehaviour
     {
         MousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
-        if (TargetUnit == null && hadTargetLast)
+        if (TargetUnit == null && targetSet)
         {
             OnTargetDestroyed();
             return;
@@ -41,8 +50,6 @@ public abstract class PlacementTemplate : MonoBehaviour
 
         UpdateTarget();
         UpdateTransform();
-
-        hadTargetLast = TargetUnit != null;
     }
 
     protected virtual void UpdateTarget()
@@ -56,30 +63,27 @@ public abstract class PlacementTemplate : MonoBehaviour
         Destroy(gameObject);
     }
 
-    protected void SetAroundTarget(float dist, bool pointUp = false)
+    protected void SetAroundTarget(float dist, bool pointUp)
     {
         Vector2 targetPos = TargetUnit.transform.position;
-        Vector2 dir = (targetPos - MousePos).normalized;
-        if (pointUp) dir *= -1;
+        Vector2 dir = (MousePos - targetPos).normalized;
 
         transform.position = targetPos + dir * dist;
-        transform.up = dir;
+        transform.up = pointUp ? dir : dir * -1;
     }
     protected void SetAroundTarget(float dist, bool pointUp, float maxAngle, Vector2 angleFrom)
     {
         Vector2 targetPos = TargetUnit.transform.position;
-        Vector2 dir = targetPos - MousePos;
-        if (pointUp) dir *= -1;
+        Vector2 dir = MousePos - targetPos;
 
         float angle = Vector2.SignedAngle(angleFrom, dir);
         angle = Mathf.Clamp(angle, -maxAngle, maxAngle);
-        Tools.Log(angle);
 
         Quaternion r = Quaternion.Euler(0, 0, angle);
         dir = (r * angleFrom).normalized;
 
-        transform.up = dir;
         transform.position = targetPos + dir * dist;
+        transform.up = pointUp ? dir : dir * -1;
     }
     protected Unit GetNearestUnit(Vector2 point, float range, LayerMask unitMask, bool friendlyOnly = false)
     {
@@ -101,12 +105,5 @@ public abstract class PlacementTemplate : MonoBehaviour
             }
         }
         return nearest;
-    }
-
-    private static float UnwindAngle(float a = 3.14f)
-    {
-        a = Tools.Mod(a, Mathf.PI * 2);
-        if (a < 0) a += 360;
-        return a;
     }
 }
