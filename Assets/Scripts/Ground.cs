@@ -59,6 +59,16 @@ public class Ground : MonoBehaviour
     private bool botSurfaceVision = false;
 
 
+    // PUBLIC HELPERS
+
+    public void SetOnSurface(Transform thing, float xPos, bool isTop)
+    {
+        thing.up = GetNormalAt(xPos, isTop);
+        thing.position = new Vector2(xPos, GetHeightAt(xPos, isTop));
+        thing.position -= thing.up * 0.1f;
+    }
+
+
     // PUBLIC ACCESSORS
 
     public float GetHeightAt(float worldPosX, bool top)

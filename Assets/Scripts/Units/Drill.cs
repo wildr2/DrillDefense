@@ -12,6 +12,7 @@ public class Drill : Unit
     private float speed = 1; // units per second
     private bool exploding = false;
 
+    public DrillTemplate templatePrefab;
     public Transform diggerCircle;
 
     private Ground ground;
@@ -26,8 +27,7 @@ public class Drill : Unit
     }
     public void SetDirection(Vector2 dir)
     {
-        //fallGravity = -Vector2.Dot(dir, Vector2.up);
-        transform.up = -dir;
+        transform.up = dir;
     }
     public void Explode()
     {
@@ -54,7 +54,7 @@ public class Drill : Unit
         
 
         // Move
-        transform.position -= transform.up * speed * Time.deltaTime;
+        transform.position += transform.up * speed * Time.deltaTime;
 
         // Death
         if (health <= 0 || IsOutOfBounds())

@@ -6,7 +6,7 @@ using UnityEngine.Networking;
 public abstract class Building : Unit
 {
     public AudioSource buildSound;
-    public Transform templatePrefab;
+    public BuildingTemplate templatePrefab;
     public abstract int Cost { get; }
 
 
