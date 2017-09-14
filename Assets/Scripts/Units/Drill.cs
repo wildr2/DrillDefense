@@ -7,19 +7,20 @@ using UnityEngine.Networking;
 public class Drill : Unit
 {
     public override float KillGold { get { return 0; } }
+    public const int DrillCost = 10;
 
     private float health = 1;
     private float speed = 1; // units per second
     private bool exploding = false;
 
-    public DrillTemplate templatePrefab;
+    public DrillPlacer placerPrefab;
     public Transform diggerCircle;
 
     private Ground ground;
 
     // args: rockCounts 
     public System.Action<int[]> onDig;
- 
+
 
     public override void Init(Player owner)
     {
@@ -33,6 +34,7 @@ public class Drill : Unit
     {
         RpcOnExplode();
     }
+
 
     protected override void Awake()
     {
@@ -76,17 +78,12 @@ public class Drill : Unit
     [ClientRpc]
     private void RpcOnCollideDrill(NetworkInstanceId drillNetId)
     {
-        OnCollideDrill(ClientScene.FindLocalObject(drillNetId).GetComponent<Drill>());
+        Drill drill = ClientScene.FindLocalObject(drillNetId).GetComponent<Drill>();
+        if (drill != null)
+            Kill(drill.Owner);
     }
-    private void OnCollideDrill(Drill drill)
-    {
-        Kill(drill.Owner);
-    }
-
-    
-
-
-    private void OnExplode()
+    [ClientRpc]
+    private void RpcOnExplode()
     {
         diggerCircle.gameObject.SetActive(true);
         StartCoroutine(CoroutineUtil.DoAtEndOfFrame(() =>
@@ -95,11 +92,7 @@ public class Drill : Unit
             health = 0;
         }));
     }
-    [ClientRpc]
-    private void RpcOnExplode()
-    {
-        OnExplode();
-    }
+
 
     private bool IsOutOfBounds()
     {

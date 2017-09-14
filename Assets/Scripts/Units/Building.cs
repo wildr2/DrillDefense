@@ -6,7 +6,7 @@ using UnityEngine.Networking;
 public abstract class Building : Unit
 {
     public AudioSource buildSound;
-    public BuildingTemplate templatePrefab;
+    public BuildingPlacer placerPrefab;
     public abstract int Cost { get; }
 
 
@@ -27,15 +27,10 @@ public abstract class Building : Unit
             RpcOnCollideDrill(drill.netId);
         }
     }
-    
-
     [ClientRpc]
     private void RpcOnCollideDrill(NetworkInstanceId drillNetId)
     {
-        OnCollideDrill(ClientScene.FindLocalObject(drillNetId).GetComponent<Drill>());
-    }
-    private void OnCollideDrill(Drill drill)
-    {
+        Drill drill = ClientScene.FindLocalObject(drillNetId).GetComponent<Drill>();
         Kill(drill.Owner);
     }
 }

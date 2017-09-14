@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BuildingTemplate : PlacementTemplate
+public class BuildingPlacer : Placer
 {
     public float targetPlaceDist = 1.25f;
     public float targetAttachDist = 1;
@@ -10,35 +10,44 @@ public class BuildingTemplate : PlacementTemplate
     public LayerMask targetUnitMask;
     private Ground ground;
 
+    private bool targetGround = false;
+
+
     public void Init(Player owner, Ground ground)
     {
         this.ground = ground;
+        aimUp = false;
         base.Init(owner);
     }
     protected override void UpdateTarget()
     {
-        Unit potentialTarget = GetNearestUnit(MousePos, targetAttachDist, targetUnitMask, true);
-        if (potentialTarget)
+        Unit unit = GetNearestUnit(MousePos, targetAttachDist, targetUnitMask, true);
+        if (unit)
         {
-            float potentialTargetDist = Vector2.Distance(potentialTarget.transform.position, MousePos);
+            float unitDist = Vector2.Distance(unit.transform.position, MousePos);
             float groundDist = Mathf.Abs(ground.GetHeightAt(MousePos.x, owner.IsTop) - MousePos.y);
 
-            TargetUnit = potentialTargetDist < groundDist ? potentialTarget : null;
+            TargetUnit = unitDist < groundDist ? unit : null;
         }
         else
         {
             TargetUnit = null;
-        } 
+        }
+        targetGround = TargetUnit == null;
     }
     protected override void UpdateTransform()
     {
         if (TargetUnit)
         {
-            SetAroundTarget(targetPlaceDist, false, atDrillMaxAngle, -owner.Up);
+            SetAroundTarget(targetPlaceDist, atDrillMaxAngle, -owner.Up);
         }
-        else
+        else if (targetGround)
         { 
             ground.SetOnSurface(transform, MousePos.x, owner.IsTop);
+        }
+        else
+        {
+            transform.position = MousePos;
         }
     }
 }

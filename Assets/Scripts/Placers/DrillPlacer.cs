@@ -2,23 +2,19 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class DrillTemplate : PlacementTemplate
+public class DrillPlacer : Placer
 {
-    public float drillPlaceDist = 1.25f;
+    public float drillPlaceDist = 1.3f;
     public float targetAttachDist = 1;
     public float atDrillMaxAngle = 45;
     public LayerMask targetUnitMask;
 
-    private const float houseOffset = 0.35f;
+    private const float houseOffset = 0.5f;
 
     
     protected override void UpdateTarget()
     {
         TargetUnit = GetNearestUnit(MousePos, targetAttachDist, targetUnitMask, true);
-        //if (!TargetUnit || TargetUnit as DrillHouse)
-        //{
-        //    TargetUnit = GetNearestUnit(MousePos, targetAttachDist, targetUnitMask, true);
-        //}
     }
     protected override void UpdateTransform()
     {
@@ -27,7 +23,7 @@ public class DrillTemplate : PlacementTemplate
             if (TargetUnit as Drill)
             {
                 // Near drill
-                SetAroundTarget(drillPlaceDist, true, atDrillMaxAngle, -owner.Up);
+                SetAroundTarget(drillPlaceDist, atDrillMaxAngle, -owner.Up);
             }
             else
             {
