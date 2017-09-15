@@ -10,6 +10,7 @@ public abstract class Unit : NetworkBehaviour
     public abstract float KillGold { get; }
 
     public Transform graphics;
+    public Transform selectionHighlight;
     public Transform visionArea;
 
     public System.Action<Unit> onDestroyed;
@@ -30,6 +31,13 @@ public abstract class Unit : NetworkBehaviour
         {
             graphics.gameObject.SetActive(visible);
         }       
+    }
+    public virtual void ShowSelectionHighlight(bool show = true)
+    {
+        if (selectionHighlight.gameObject.activeInHierarchy != show)
+        {
+            selectionHighlight.gameObject.SetActive(show);
+        }
     }
 
     protected void Kill(Player killer)

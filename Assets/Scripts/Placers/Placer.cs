@@ -5,41 +5,42 @@ using UnityEngine;
 public abstract class Placer : MonoBehaviour
 {
     public Transform graphics;
+    protected LineRenderer aimLine;
     protected Player owner;
 
-    public Unit TargetUnit { get; protected set; }
+    protected Vector2 MousePos { get; private set; }
+    public PlaceTarget Target { get; protected set; }
+
+    public KeyCode ReleaseKey { get; set; }
+    protected bool Released { get; private set; }
+
+    private const float smoothSpeed = 30f;
+    private bool smoothMove = false;
 
     protected bool aimUp = true;
 
-    private bool released = false;
-    private bool targetUnitSet = false;
-    private bool smoothMove = false;
-    private const float smoothSpeed = 30f;
-
-    protected Vector2 MousePos { get; private set; }
     public Vector2 Pos
     {
         get
         {
-            return transform.position;
+            return Target.pos;
         }
     }
     public Vector2 Up
     {
         get
         {
-            return transform.up;
+            return Target.up;
         }
     }
     public Vector2 Aim
     {
         get
         {
-            return transform.up * (aimUp ? 1 : -1);
+            return Target.up * (aimUp ? 1 : -1);
         }
     }
 
-    public KeyCode ReleaseKey { get; set; }
     public System.Action<Placer> onConfirm;
     public System.Action onStop;
 
@@ -47,105 +48,210 @@ public abstract class Placer : MonoBehaviour
     public virtual void Init(Player owner)
     {
         this.owner = owner;
-        MousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        UpdateTransform();
+
+        aimLine = GetComponent<LineRenderer>();
+        if (aimLine != null)
+        {
+            //aimLine.enabled = false;
+        }
+
+        Target = new PlaceTarget();
+        Update();
     }
     public virtual void Stop()
     {
         if (onStop != null)
             onStop();
+
+        if (Target.unit)
+        {
+            Target.unit.ShowSelectionHighlight(false);
+        }
         Destroy(gameObject);
     }
+
 
     protected virtual void Update()
     {
         MousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
 
-        if (released)
+        bool hadTarget = Target.valid;
+        Unit oldTargetUnit = Target.unit;
+
+        // Pre Release
+        if (!Released) 
         {
-            if (targetUnitSet && TargetUnit == null)
-            {
-                OnTargetDestroyed();
-            }
+            UpdatePreRelease();
         }
+        // Post Release
         else
         {
-            // Release
-            if (Input.GetKeyUp(ReleaseKey))
-            {
-                UpdateTarget();
-                released = true;
-                targetUnitSet = TargetUnit != null;
-                smoothMove = true;
-            }
+            UpdatePostRelease();
         }
 
-        // Update position / orientation
-        Vector2 oldPos = transform.position;
-        Vector2 oldUp = transform.up;
-        UpdateTransform();
-
-        // Confirm
-        if (Input.GetMouseButtonDown(0))
+        // Target on / off check
+        if ((Target.valid && !hadTarget))
         {
-            if (onConfirm != null)
-                onConfirm(this);
+            OnTargetOn();
         }
+        else if (!Target.valid && hadTarget)
+        {
+            OnTargetOff();
+        }
+        if (oldTargetUnit != Target.unit)
+        {
+            OnTargetUnitChange(oldTargetUnit);
+        }
+    }
+    private void UpdatePreRelease()
+    {
+        // Attach to mouse
+        transform.position = MousePos;
 
+        // Target
+        UpdateTarget();
+
+        // Immediate confirm if no need to aim
+        if (Target.valid && Input.GetMouseButtonDown(0))
+        {
+            Confirm();
+        }
         // Cancel
         else if (Input.GetMouseButtonDown(1))
         {
             Stop();
         }
 
-        // Smooth movement
+        // Release
+        if (Input.GetKeyUp(ReleaseKey))
+        {
+            Release();
+            return;
+        }
+    }
+    private void UpdatePostRelease()
+    {
+        UpdateTarget();
+
+        // Confirm
+        if (Input.GetMouseButtonDown(0))
+        {
+            Confirm();
+        }
+        // Cancel
+        else if (Input.GetMouseButtonDown(1))
+        {
+            Stop();
+        }
+
+        // Position / orientation
+        UpdatePostReleaseTransform();
+
+        // Aimline
+        if (aimLine != null)
+        {
+            SetAimLine(transform.position, transform.position + transform.up * 1000 * (aimUp ? 1 : -1));
+        }
+    }
+    private void UpdatePostReleaseTransform()
+    {
         if (smoothMove)
         {
-            Vector2 targetPos = transform.position;
+            transform.position = Vector2.Lerp(transform.position, Target.pos, Time.deltaTime * smoothSpeed);
+            transform.up = Vector2.Lerp(transform.up, Target.up, Time.deltaTime * smoothSpeed);
 
-            transform.position = Vector2.Lerp(oldPos, targetPos, Time.deltaTime * smoothSpeed);
-            transform.up = Vector2.Lerp(oldUp, transform.up, Time.deltaTime * smoothSpeed);
-
-            float dist = Vector2.Distance(transform.position, targetPos);
+            float dist = Vector2.Distance(transform.position, Target.pos);
             if (dist < 0.1f)
             {
                 smoothMove = false;
             }
+        }
+        else
+        {
+            transform.position = Target.pos;
+            transform.up = Target.up;
         }
     }
 
     protected virtual void UpdateTarget()
     {
     }
-    protected virtual void UpdateTransform()
+    protected virtual void Release()
     {
+        if (Target.valid)
+        {
+            Released = true;
+            smoothMove = true;
+            UpdatePostRelease();
+            if (Target.unit)
+            {
+                Target.unit.ShowSelectionHighlight(false);
+            }
+        }
+        else
+        {
+            Stop();
+        }
     }
-    protected virtual void OnTargetDestroyed()
+    protected virtual void OnTargetUnitChange(Unit oldUnit)
     {
-        Stop();
+        if (oldUnit != null)
+        {
+            oldUnit.ShowSelectionHighlight(false);
+        }
+        if (Target.unit)
+        {
+            Target.unit.ShowSelectionHighlight(true);
+        }
+    }
+    protected virtual void OnTargetOn()
+    {
+        if (aimLine != null)
+        {
+            aimLine.enabled = true;
+        }
+    }
+    protected virtual void OnTargetOff()
+    {
+        if (Released)
+        {
+            Stop();
+        }
+        else
+        {
+            if (aimLine != null)
+            {
+                aimLine.enabled = false;
+            }
+        }
+    }
+    protected virtual void Confirm()
+    {
+        if (onConfirm != null)
+            onConfirm(this);
     }
 
-    protected void SetAroundTarget(float dist)
+    protected void SetAroundTargetUnit(float dist)
     {
-        Vector2 targetPos = TargetUnit.transform.position;
-        Vector2 dir = (MousePos - targetPos).normalized;
+        Vector2 unitPos = Target.unit.transform.position;
+        Vector2 aim = (MousePos - unitPos).normalized;
 
-        transform.position = targetPos + dir * dist;
-        transform.up = aimUp ? dir : dir * -1;
+        Target.pos = unitPos + aim * dist;
+        Target.up = aimUp ? aim : aim * -1;
     }
-    protected void SetAroundTarget(float dist, float maxAngle, Vector2 angleFrom)
+    protected void SetAroundTargetUnit(float dist, float maxAngle, Vector2 angleFrom)
     {
-        Vector2 targetPos = TargetUnit.transform.position;
-        Vector2 dir = MousePos - targetPos;
+        Vector2 unitPos = Target.unit.transform.position;
+        Vector2 aim = MousePos - unitPos;
 
-        float angle = Vector2.SignedAngle(angleFrom, dir);
+        float angle = Vector2.SignedAngle(angleFrom, aim);
         angle = Mathf.Clamp(angle, -maxAngle, maxAngle);
 
         Quaternion r = Quaternion.Euler(0, 0, angle);
-        dir = (r * angleFrom).normalized;
+        aim = (r * angleFrom).normalized;
 
-        transform.position = targetPos + dir * dist;
-        transform.up = aimUp ? dir : dir * -1;
+        Target.pos = unitPos + aim * dist;
+        Target.up = aimUp ? aim : aim * -1;
     }
     protected Unit GetNearestUnit(Vector2 point, float range, LayerMask unitMask, bool friendlyOnly = false)
     {
@@ -168,4 +274,20 @@ public abstract class Placer : MonoBehaviour
         }
         return nearest;
     }
+
+    private void SetAimLine(Vector2 p1, Vector2 p2)
+    {
+        aimLine.SetPosition(0, new Vector3(p1.x, p1.y, -5));
+        aimLine.SetPosition(1, new Vector3(p2.x, p2.y, -5));
+    }
+
+
+    public class PlaceTarget
+    {
+        public Vector2 pos = new Vector2();
+        public Vector2 up = new Vector2();
+        public Unit unit = null;
+        public bool valid = false;
+    }
 }
+

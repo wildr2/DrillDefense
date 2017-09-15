@@ -5,37 +5,39 @@ using UnityEngine;
 public class DrillPlacer : Placer
 {
     public float drillPlaceDist = 1.3f;
-    public float targetAttachDist = 1;
     public float atDrillMaxAngle = 45;
     public LayerMask targetUnitMask;
 
     private const float houseOffset = 0.5f;
 
-    
+
+    public override void Init(Player owner)
+    {
+        transform.up = -owner.Up;
+        base.Init(owner);
+    }
+
     protected override void UpdateTarget()
     {
-        TargetUnit = GetNearestUnit(MousePos, targetAttachDist, targetUnitMask, true);
-    }
-    protected override void UpdateTransform()
-    {
-        if (TargetUnit)
+        if (!Released)
         {
-            if (TargetUnit as Drill)
+            Target.unit = GetNearestUnit(MousePos, 1000, targetUnitMask, true);
+        }
+        
+        Target.valid = Target.unit != null;
+        if (Target.valid)
+        {
+            if (Target.unit as Drill)
             {
                 // Near drill
-                SetAroundTarget(drillPlaceDist, atDrillMaxAngle, -owner.Up);
+                SetAroundTargetUnit(drillPlaceDist, atDrillMaxAngle, -owner.Up);
             }
             else
             {
                 // At drillhouse
-                transform.up = -TargetUnit.transform.up;
-                transform.position = TargetUnit.transform.position + transform.up * houseOffset;
+                Target.up = -Target.unit.transform.up;
+                Target.pos = (Vector2)Target.unit.transform.position + Target.up * houseOffset;
             }
-        }
-        else
-        {
-            transform.position = MousePos;
-            transform.up = -owner.Up;
         }
     }
 }

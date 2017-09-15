@@ -67,6 +67,12 @@ public class Ground : MonoBehaviour
         thing.position = new Vector2(xPos, GetHeightAt(xPos, isTop));
         thing.position -= thing.up * 0.1f;
     }
+    public void SetOnSurface(out Vector2 pos, out Vector2 up, float xPos, bool isTop)
+    {
+        up = GetNormalAt(xPos, isTop);
+        pos = new Vector2(xPos, GetHeightAt(xPos, isTop));
+        pos -= up * 0.1f;
+    }
 
 
     // PUBLIC ACCESSORS

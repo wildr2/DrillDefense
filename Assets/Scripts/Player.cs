@@ -10,10 +10,9 @@ public class Player : NetworkBehaviour
 {
     public DrillHouse drillHousePrefab;
     public Drill drillPrefab;
+    public Placer bombPlacerPrefab;
     private Ground ground;
     private GameManager gm;
-
-    private LineRenderer aimLine;
 
     [SyncVar] public short id;
     [SyncVar] public float gold;
@@ -61,9 +60,6 @@ public class Player : NetworkBehaviour
     {
         gm = FindObjectOfType<GameManager>();
         ground = FindObjectOfType<Ground>();
-        aimLine = GetComponent<LineRenderer>();
-        
-        aimLine.enabled = false;
     }
     private void Start()
     {
@@ -100,12 +96,6 @@ public class Player : NetworkBehaviour
     {
         if (!gm.IsPlaying) return;
         gold += goldPerSecond * Time.deltaTime;
-
-        // Aim line
-        if (IsPlacing())
-        {
-            UpdatePlacingAimLine();
-        }
     }
     private IEnumerator HumanUpdate()
     {
@@ -131,6 +121,14 @@ public class Player : NetworkBehaviour
                 p.Init(this);
                 p.ReleaseKey = KeyCode.D;
                 p.onConfirm = OnConfirmPlaceDrill;
+                StartPlacing(p);
+            }
+            else if (Input.GetKeyDown(KeyCode.E))
+            {
+                Placer p = Instantiate(bombPlacerPrefab);
+                p.Init(this);
+                p.ReleaseKey = KeyCode.E;
+                p.onConfirm = OnConfirmPlaceBomb;
                 StartPlacing(p);
             }
 
@@ -215,23 +213,15 @@ public class Player : NetworkBehaviour
         {
             Destroy(placer.gameObject);
         }
-
-        p.onStop += OnStopPlacing;
         placer = p;
-        aimLine.enabled = true;
-        UpdatePlacingAimLine();
-    }
-    private void OnStopPlacing()
-    {
-        aimLine.enabled = false;
     }
     private void OnConfirmPlaceBuilding(Placer placer)
     {
         if (CanBuild(drillHousePrefab))
         {
-            if (placer.TargetUnit)
+            if (placer.Target.unit)
             {
-                Drill drill = placer.TargetUnit as Drill;
+                Drill drill = placer.Target.unit as Drill;
                 BuildNearDrill(drill, placer.Pos, placer.Up);
                 placer.Stop();
             }
@@ -245,7 +235,7 @@ public class Player : NetworkBehaviour
     }
     private void OnConfirmPlaceDrill(Placer placer)
     {
-        DrillHouse house = placer.TargetUnit as DrillHouse;
+        DrillHouse house = placer.Target.unit as DrillHouse;
         if (house && CanLaunchDrillFromHouse(house))
         {
             CmdLaunchDrillFromHouse(house.netId, placer.Pos, placer.Up);
@@ -253,7 +243,7 @@ public class Player : NetworkBehaviour
             return;
         }
 
-        Drill drill = placer.TargetUnit as Drill;
+        Drill drill = placer.Target.unit as Drill;
         if (drill && CanLaunchDrillFromDrill(drill))
         {
             LaunchDrillFromDrill(drill, placer.Pos, placer.Up);
@@ -261,15 +251,15 @@ public class Player : NetworkBehaviour
             return;
         }
     }
-    
-    private void UpdatePlacingAimLine()
+    private void OnConfirmPlaceBomb(Placer placer)
     {
-        SetAimLine(placer.Pos, placer.Pos + placer.Aim * 200);
-    }
-    private void SetAimLine(Vector2 p1, Vector2 p2)
-    {
-        aimLine.SetPosition(0, new Vector3(p1.x, p1.y, -5));
-        aimLine.SetPosition(1, new Vector3(p2.x, p2.y, -5));
+        Drill drill = placer.Target.unit as Drill;
+        if (drill)
+        {
+            ExplodeDrill(drill);
+            placer.Stop();
+            return;
+        }
     }
 
     public bool CanLaunchDrillFromHouse(DrillHouse house)
