@@ -7,7 +7,7 @@ using UnityEngine.Networking;
 public class Drill : Unit
 {
     public override float KillGold { get { return 0; } }
-    public const int DrillCost = 10;
+    public const int DrillCost = 20;
 
     private float health = 1;
     private float speed = 1; // units per second

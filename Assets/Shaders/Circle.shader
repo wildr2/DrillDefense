@@ -1,6 +1,6 @@
 ﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
 
-Shader "Custom/Ring" 
+Shader "Custom/Circle" 
 {
 	Properties
 	{
@@ -14,14 +14,14 @@ Shader "Custom/Ring"
 		{
 			"Queue" = "Transparent"
 			"IgnoreProjector" = "True"
-			"RenderType" = "Opaque"
+			"RenderType" = "Transparent"
 			"PreviewType" = "Plane"
 		}
 
 		Cull Off
 		Lighting Off
 		ZWrite Off
-		Blend One OneMinusSrcAlpha
+		Blend SrcAlpha OneMinusSrcAlpha
 
 		Pass
 		{
@@ -60,9 +60,7 @@ Shader "Custom/Ring"
 				}
 				else if (dist > _InnerRadius)
 				{
-					fixed4 c = _Color;
-					c.a = 0.5;
-					return c;
+					return _Color;
 				}
 				else
 				{

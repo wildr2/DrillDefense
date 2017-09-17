@@ -26,7 +26,7 @@ public class Player : NetworkBehaviour
     // Gold
     private const int startGold = 100;
     private const int goldPerSecond = 1;
-    private const int goldValue = 30; // per unit square of rock
+    private const int goldValue = 25; // per unit square of rock
 
     // Construction
     private List<Building> buildings = new List<Building>();
