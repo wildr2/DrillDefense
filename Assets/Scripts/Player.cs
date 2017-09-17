@@ -133,11 +133,11 @@ public class Player : NetworkBehaviour
                 StartPlacing(p);
             }
 
-            if (!IsPlacing())
-            {
-                // Click action
-                UpdateClickAction();
-            }
+            //if (!IsPlacing())
+            //{
+            //    // Click action
+            //    UpdateClickAction();
+            //}
 
             yield return null;
         }
@@ -190,12 +190,12 @@ public class Player : NetworkBehaviour
             //}
 
             // Explode drill
-            Drill drill = col.GetComponent<Drill>();
-            if (drill != null && drill.Owner == this)
-            {
-                ExplodeDrill(drill);
-                return;
-            }
+            //Drill drill = col.GetComponent<Drill>();
+            //if (drill != null && drill.Owner == this)
+            //{
+            //    ExplodeDrill(drill);
+            //    return;
+            //}
         }
     }
 
