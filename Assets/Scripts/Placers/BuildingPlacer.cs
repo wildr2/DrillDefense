@@ -14,7 +14,8 @@ public class BuildingPlacer : Placer
     {
         this.ground = ground;
         aimUp = false;
-        uiCostText.text = buildingPrefab.Cost.ToString();
+
+        SetGoldCost(buildingPrefab.Cost);
 
         base.Init(owner);
     }

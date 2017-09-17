@@ -16,7 +16,7 @@ public class DrillPlacer : Placer
         base.Init(owner);
 
         transform.up = -owner.Up;
-        uiCostText.text = Drill.DrillCost.ToString();
+        SetGoldCost(Drill.DrillCost);
     }
 
     protected override void UpdateTarget()

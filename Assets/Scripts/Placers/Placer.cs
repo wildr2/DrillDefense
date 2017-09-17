@@ -6,8 +6,6 @@ using UnityEngine.UI;
 public abstract class Placer : MonoBehaviour
 {
     public Transform graphics;
-    public Transform uiMessage;
-    public Text uiCostText;
     protected LineRenderer aimLine;
     protected Player owner;
 
@@ -21,6 +19,10 @@ public abstract class Placer : MonoBehaviour
     private bool smoothMove = false;
 
     protected bool aimUp = true;
+
+    public Transform uiMessage;
+    public Text uiCostText;
+    private float goldCost = 0;
 
     public Vector2 Pos
     {
@@ -94,6 +96,7 @@ public abstract class Placer : MonoBehaviour
         {
             uiMessage.transform.position = MousePos;
             uiMessage.rotation = owner.UprightRotation;
+            uiCostText.color = owner.GetGold() >= goldCost ? Color.white : Color.red;
         }
 
         // Target on / off check
@@ -236,6 +239,12 @@ public abstract class Placer : MonoBehaviour
     {
         if (onConfirm != null)
             onConfirm(this);
+    }
+
+    protected void SetGoldCost(float cost)
+    {
+        goldCost = cost;
+        uiCostText.text = ((int)cost).ToString();
     }
 
     protected void SetAroundTargetUnit(float dist)
