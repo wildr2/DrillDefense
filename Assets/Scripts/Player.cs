@@ -22,6 +22,7 @@ public class Player : NetworkBehaviour
     public bool ai = false;
     public bool IsTop { get; private set; }
     public Vector2 Up { get { return IsTop ? Vector2.up : -Vector2.up; } }
+    public Quaternion UprightRotation { get { return IsTop ? Quaternion.identity : Quaternion.Euler(0, 0, 180); } }
 
     // Gold
     private const int startGold = 100;
@@ -65,7 +66,7 @@ public class Player : NetworkBehaviour
     {
         DataManager dm = DataManager.Instance;
 
-        IsTop = id == 0;
+        IsTop = dm.firstPlayerIsTop ? id == 0 : id == 1;
         Color = dm.playerColors[id];
 
         gold = startGold;

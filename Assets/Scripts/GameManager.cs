@@ -9,8 +9,8 @@ public class GameManager : MonoBehaviour
     public SeedManager seeder;
 
     public Player[] Players { get; private set; }
-    public Player TopPlayer { get { return Players[0]; } }
-    public Player BotPlayer { get { return Players[1]; } }
+    public Player TopPlayer { get; private set; }
+    public Player BotPlayer { get; private set; }
     public Player LocalHuman { get; private set; }
 
     public bool IsPlaying { get; private set; }
@@ -21,12 +21,18 @@ public class GameManager : MonoBehaviour
     public void RegisterPlayer(Player player)
     {
         Players[player.id] = player;
-
-        if (player.isLocalPlayer && !player.ai)
+        if (player.IsTop)
         {
-            // local human player - flip camera if bot player
-            if (!player.IsTop)
+            TopPlayer = player;
+        }
+        else
+        {
+            BotPlayer = player;
+            if (player.IsLocalHuman())
+            {
+                // Flip camera if local human player is on the bottom
                 Camera.main.transform.Rotate(Vector3.forward, 180);
+            }
         }
 
         Tools.Log("Registered Player " + player.id + (player.ai ? " (AI)" : ""), Color.blue);

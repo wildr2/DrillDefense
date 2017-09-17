@@ -13,10 +13,10 @@ public class DrillPlacer : Placer
 
     public override void Init(Player owner)
     {
+        base.Init(owner);
+
         transform.up = -owner.Up;
         uiCostText.text = Drill.DrillCost.ToString();
-
-        base.Init(owner);
     }
 
     protected override void UpdateTarget()

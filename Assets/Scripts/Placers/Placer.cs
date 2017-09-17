@@ -54,6 +54,7 @@ public abstract class Placer : MonoBehaviour
 
         aimLine = GetComponent<LineRenderer>();
 
+        transform.up = owner.Up;
         Target = new PlaceTarget();
         Update();
     }
@@ -92,7 +93,7 @@ public abstract class Placer : MonoBehaviour
         if (uiMessage != null)
         {
             uiMessage.transform.position = MousePos;
-            uiMessage.transform.up = owner.Up;
+            uiMessage.rotation = owner.UprightRotation;
         }
 
         // Target on / off check

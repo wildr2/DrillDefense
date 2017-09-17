@@ -35,6 +35,7 @@ public class DataManager : MonoBehaviour
     public const int numPlayers = 2;
     public int numAI = 0;
     public int NumHumans { get { return numPlayers - numAI; } }
+    public bool firstPlayerIsTop = true;
 
     public Color[] playerColors;
 
