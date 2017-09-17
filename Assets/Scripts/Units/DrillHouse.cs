@@ -8,6 +8,8 @@ public class DrillHouse : Building
 {
     public override int Cost { get { return 50; } }
     public override float KillGold { get { return 50; } }
+    
+    
 
     public Drill drillPrefab;
     public SpriteRenderer roofSpriteR;

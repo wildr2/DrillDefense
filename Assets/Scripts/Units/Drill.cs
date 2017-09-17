@@ -9,12 +9,19 @@ public class Drill : Unit
     public override float KillGold { get { return 0; } }
     public const int DrillCost = 20;
 
+    private Vector2 position0;
+    private float lifeTime = 0;
     private float health = 1;
     private float speed = 1; // units per second
+    private float timeSinceDigDamage = 100;
     private bool exploding = false;
+    private const float shakeTimeWindow = 0.5f;
+
+    private SpriteRenderer spriteR;
 
     public DrillPlacer placerPrefab;
     public Transform diggerCircle;
+    public Transform shakingParent;
 
     private Ground ground;
 
@@ -24,6 +31,7 @@ public class Drill : Unit
 
     public override void Init(Player owner)
     {
+        position0 = transform.position;
         base.Init(owner);
     }
     public void SetDirection(Vector2 dir)
@@ -40,6 +48,7 @@ public class Drill : Unit
     {
         base.Awake();
         ground = FindObjectOfType<Ground>();
+        spriteR = graphics.GetComponentInChildren<SpriteRenderer>();
     }
     private void Update()
     {
@@ -48,15 +57,32 @@ public class Drill : Unit
         Vector3 center = transform.position - transform.up * 0.5f;
         ground.CollectRocks(center, exploding ? 4 : 1, out rockCounts);
 
-        // Decrease Health
-        health -= rockCounts[(int)RockType.Gold] * Ground.RockValue * 0.7f;
-        health -= rockCounts[(int)RockType.Hardrock] * Ground.RockValue * 3f;
+        // Dig Damage
+        float damage = rockCounts[(int)RockType.Gold] * Ground.RockValue * 0.7f;
+        damage += rockCounts[(int)RockType.Hardrock] * Ground.RockValue * 3f;
+        if (damage > 0)
+        {
+            timeSinceDigDamage = 0;
+            health -= damage;
+        }
+        else
+        {
+            timeSinceDigDamage += Time.deltaTime;
+        }
 
         if (onDig != null) onDig(rockCounts);
-        
 
         // Move
-        transform.position += transform.up * speed * Time.deltaTime;
+        lifeTime += Time.deltaTime;
+        transform.position = position0 + (Vector2)transform.up * lifeTime * speed;
+
+        // Shake
+        float shakeIntensity = timeSinceDigDamage < shakeTimeWindow ? 0.015f : 0; //health < 0.25f ? 0.03f : 0.015f;
+        float shakeOffset = Mathf.Sin(lifeTime * 60f) * shakeIntensity;
+        shakingParent.position += transform.right * shakeOffset;
+
+        // Damage color
+        spriteR.color = Color.Lerp(Color.red, Color.white, health);
 
         // Death
         if (health <= 0 || IsOutOfBounds())
