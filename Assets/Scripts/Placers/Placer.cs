@@ -1,10 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public abstract class Placer : MonoBehaviour
 {
     public Transform graphics;
+    public Transform uiMessage;
+    public Text uiCostText;
     protected LineRenderer aimLine;
     protected Player owner;
 
@@ -50,10 +53,6 @@ public abstract class Placer : MonoBehaviour
         this.owner = owner;
 
         aimLine = GetComponent<LineRenderer>();
-        if (aimLine != null)
-        {
-            //aimLine.enabled = false;
-        }
 
         Target = new PlaceTarget();
         Update();
@@ -87,6 +86,13 @@ public abstract class Placer : MonoBehaviour
         else
         {
             UpdatePostRelease();
+        }
+
+        // UI Message
+        if (uiMessage != null)
+        {
+            uiMessage.transform.position = MousePos;
+            uiMessage.transform.up = owner.Up;
         }
 
         // Target on / off check

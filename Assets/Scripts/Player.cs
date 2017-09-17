@@ -110,7 +110,7 @@ public class Player : NetworkBehaviour
             if (Input.GetKeyDown(KeyCode.H))
             {
                 BuildingPlacer p = Instantiate(drillHousePrefab.placerPrefab);
-                p.Init(this, ground);
+                p.Init(this, ground, drillHousePrefab);
                 p.ReleaseKey = KeyCode.H;
                 p.onConfirm += OnConfirmPlaceBuilding;
                 StartPlacing(p);

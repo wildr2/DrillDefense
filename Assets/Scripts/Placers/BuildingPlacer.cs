@@ -10,10 +10,12 @@ public class BuildingPlacer : Placer
     private Ground ground;
 
 
-    public void Init(Player owner, Ground ground)
+    public void Init(Player owner, Ground ground, Building buildingPrefab)
     {
         this.ground = ground;
         aimUp = false;
+        uiCostText.text = buildingPrefab.Cost.ToString();
+
         base.Init(owner);
     }
     protected override void UpdateTarget()
